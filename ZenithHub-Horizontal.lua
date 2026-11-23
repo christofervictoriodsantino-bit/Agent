@@ -5,15 +5,15 @@ local tweenService = game:GetService("TweenService")
 local httpService = game:GetService("HttpService")
 local teleportService = game:GetService("TeleportService")
 
-local WINDOW_WIDTH = 1040
-local WINDOW_HEIGHT = 720
-local TITLE_HEIGHT = 34
-local RAIL_WIDTH = 186
-local COLUMN_GAP = 10
-local MIN_WIDTH = 900
-local MIN_HEIGHT = 500
-local MAX_WIDTH = 1520
-local MAX_HEIGHT = 960
+local WINDOW_WIDTH = 880
+local WINDOW_HEIGHT = 540
+local TITLE_HEIGHT = 30
+local RAIL_WIDTH = 158
+local COLUMN_GAP = 8
+local MIN_WIDTH = 760
+local MIN_HEIGHT = 400
+local MAX_WIDTH = 1280
+local MAX_HEIGHT = 760
 local CONFIG_FOLDER = "AngelHub"
 local CONFIG_FILE = "AngelHub/AngelHub.json"
 local TITLE_TEXT = "Zenith Hub | MM2"
@@ -39,6 +39,14 @@ local TEXT_COLOR = Color3.fromRGB(238, 238, 238)
 local OFF_TEXT_COLOR = Color3.fromRGB(192, 192, 196)
 local DIM_TEXT_COLOR = Color3.fromRGB(120, 120, 124)
 
+local STROKE_COLOR = Color3.fromRGB(60, 60, 66)
+local PANEL_COLOR = Color3.fromRGB(17, 17, 20)
+local PANEL_SOFT = Color3.fromRGB(23, 23, 27)
+local ROW_COLOR_FILL = Color3.fromRGB(36, 36, 42)
+local SWITCH_ON = Color3.fromRGB(232, 232, 236)
+local SWITCH_OFF = Color3.fromRGB(46, 46, 52)
+local ROW_GAP = 2
+local SECTION_GAP = 8
 local TEXT_FONT = Enum.Font.SourceSans
 local BOLD_FONT = Enum.Font.SourceSansBold
 
@@ -147,13 +155,13 @@ local function createCard(className, parent, text, height)
 	local card = create(className, {
 		Name = text,
 		Size = UDim2.new(1, 0, 0, height),
-		BackgroundColor3 = ROW_COLOR,
-		BackgroundTransparency = 0.65,
+		BackgroundColor3 = ROW_COLOR_FILL,
+		BackgroundTransparency = 0.25,
 		BorderSizePixel = 0,
 	}, boxOf(parent) or resolveParent(parent))
 
-	create("UICorner", { CornerRadius = UDim.new(0, 5) }, card)
-	local stroke = addStroke(card, ACCENT_A, 1)
+	create("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
+	local stroke = addStroke(card, STROKE_COLOR, 1)
 	card.ClipsDescendants = true
 
 	local group = AngelHub.currentGroup
@@ -163,37 +171,13 @@ local function createCard(className, parent, text, height)
 		card.Visible = not group.collapsed
 	end
 
-	card.InputBegan:Connect(function(input)
-		if not isPress(input) then
-			return
-		end
-
-		local offset = Vector2.new(input.Position.X, input.Position.Y) - card.AbsolutePosition
-		local ripple = create("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromOffset(offset.X, offset.Y),
-			Size = UDim2.fromOffset(0, 0),
-			BackgroundColor3 = Color3.new(1, 1, 1),
-			BackgroundTransparency = 0.8,
-			BorderSizePixel = 0,
-			ZIndex = 0,
-		}, card)
-
-		create("UICorner", { CornerRadius = UDim.new(1, 0) }, ripple)
-		local diameter = math.max(card.AbsoluteSize.X, card.AbsoluteSize.Y) * 2
-
-		tween(ripple, MEDIUM_TWEEN, { Size = UDim2.fromOffset(diameter, diameter), BackgroundTransparency = 1 }).Completed:Connect(function()
-			ripple:Destroy()
-		end)
-	end)
-
 	card.MouseEnter:Connect(function()
-		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.35 })
-		tween(stroke, FAST_TWEEN, { Transparency = 0.55 })
+		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.05 })
+		tween(stroke, FAST_TWEEN, { Transparency = 0.7 })
 	end)
 
 	card.MouseLeave:Connect(function()
-		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.65 })
+		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.25 })
 		tween(stroke, FAST_TWEEN, { Transparency = 1 })
 	end)
 
@@ -205,50 +189,43 @@ local function addSection(parent, text)
 		Name = text .. " Box",
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Color3.fromRGB(22, 22, 24),
-		BackgroundTransparency = 0.2,
+		BackgroundColor3 = PANEL_COLOR,
+		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
 		LayoutOrder = #AngelHub.boxes + 1,
 	}, resolveParent(parent))
 
-	create("UICorner", { CornerRadius = UDim.new(0, 8) }, box)
-	addStroke(box, Color3.fromRGB(105, 105, 110), 0.55)
-	create("UIGradient", { Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(165, 165, 170)), Rotation = 90 }, box)
-	create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, box)
-	create("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, box)
+	create("UICorner", { CornerRadius = UDim.new(0, 9) }, box)
+	addStroke(box, STROKE_COLOR, 0.45)
+	create("UIPadding", {
+		PaddingTop = UDim.new(0, 3),
+		PaddingBottom = UDim.new(0, 5),
+		PaddingLeft = UDim.new(0, 4),
+		PaddingRight = UDim.new(0, 4),
+	}, box)
+	create("UIListLayout", { Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder }, box)
 
-	local holder = create("Frame", { Name = text, Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1 }, box)
+	local holder = create("Frame", { Name = text, Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1 }, box)
 	local marker = create("Frame", {
-		Size = UDim2.fromOffset(3, 12),
-		Position = UDim2.new(0, 3, 0.5, -7),
+		Size = UDim2.fromOffset(10, 10),
+		Position = UDim2.new(0, 5, 0.5, -5),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(1, 0) }, marker)
-	addGradient(marker, 90)
-	tweenService:Create(marker, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundTransparency = 0.5 }):Play()
+	create("UICorner", { CornerRadius = UDim.new(0, 3) }, marker)
+	addGradient(marker, 45)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -14, 1, -4),
-		Position = UDim2.fromOffset(12, 0),
+		Size = UDim2.new(1, -26, 1, 0),
+		Position = UDim2.fromOffset(20, 0),
 		BackgroundTransparency = 1,
 		Text = string.upper(text),
 		TextColor3 = ACCENT_A,
-		TextSize = 11,
+		TextSize = 9,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, holder)
-
-	local line = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 1),
-		Position = UDim2.new(0, 0, 1, -2),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0,
-	}, holder)
-
-	local gradient = addGradient(line, 0)
-	gradient.Transparency = NumberSequence.new(0.3, 1)
 
 	if type(parent) == "table" then
 		parent.box = box
@@ -261,59 +238,47 @@ local function addSection(parent, text)
 end
 
 -- Controls not yet integrated are labelled and cannot claim to be active.
-local pendingControls={
-}
-local pendingButtons={
-}
+local pendingControls = {}
+local pendingButtons = {}
+
 local function addToggle(parent, text, keybind, default)
 	local startState = default == true
-	local holder, stroke = createCard("TextButton", parent, text, 28)
+	local holder, stroke = createCard("TextButton", parent, text, 24)
 	holder.Text = ""
 	holder.AutoButtonColor = false
 
-	local box = create("Frame", {
-		Size = UDim2.fromOffset(16, 16),
-		Position = UDim2.new(0, 8, 0.5, -8),
-		BackgroundColor3 = ELEMENT_COLOR,
+	local track = create("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.fromOffset(26, 13),
+		Position = UDim2.new(1, -4, 0.5, 0),
+		BackgroundColor3 = startState and SWITCH_ON or SWITCH_OFF,
 		BorderSizePixel = 0,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 4) }, box)
-	local boxStroke = addStroke(box, startState and ACCENT_A or DIM_TEXT_COLOR, startState and 0 or 0.5)
+	create("UICorner", { CornerRadius = UDim.new(1, 0) }, track)
+	local trackStroke = addStroke(track, STROKE_COLOR, startState and 1 or 0.5)
 
-	local check = create("Frame", {
+	local knob = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = startState and UDim2.fromOffset(10, 10) or UDim2.fromOffset(0, 0),
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		Size = UDim2.fromOffset(9, 9),
+		Position = UDim2.new(startState and 1 or 0, startState and -6 or 6, 0.5, 0),
+		BackgroundColor3 = startState and Color3.fromRGB(18, 18, 20) or OFF_TEXT_COLOR,
 		BorderSizePixel = 0,
-	}, box)
+	}, track)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 3) }, check)
-	addGradient(check, 45)
+	create("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
 
 	local label = create("TextLabel", {
-		Size = UDim2.new(1, keybind and -100 or -44, 1, 0),
-		Position = UDim2.fromOffset(32, 0),
+		Size = UDim2.new(1, keybind and -96 or -44, 1, 0),
+		Position = UDim2.fromOffset(7, 0),
 		BackgroundTransparency = 1,
-		Text = pendingControls[text] and (text.." (pendiente)") or (text=="Auto Get Gun" and "Auto Pickup Gun" or text),
+		Text = pendingControls[text] and (text .. " (pendiente)") or (text == "Auto Get Gun" and "Auto Pickup Gun" or text),
 		TextColor3 = startState and TEXT_COLOR or OFF_TEXT_COLOR,
-		TextSize = 13,
+		TextSize = 11.5,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, holder)
-
-	local accentBar = create("Frame", {
-		Size = UDim2.new(0, 3, 1, -10),
-		Position = UDim2.fromOffset(0, 5),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = startState and 0 or 1,
-		BorderSizePixel = 0,
-	}, holder)
-
-	create("UICorner", { CornerRadius = UDim.new(1, 0) }, accentBar)
-	addGradient(accentBar, 90)
 
 	local state = startState
 	AngelHub.values[text] = state
@@ -323,21 +288,25 @@ local function addToggle(parent, text, keybind, default)
 		state = not pendingControls[text] and value == true
 		AngelHub.values[text] = state
 
-		tween(check, POP_TWEEN, { Size = state and UDim2.fromOffset(10, 10) or UDim2.fromOffset(0, 0) })
-		tween(boxStroke, FAST_TWEEN, { Color = state and ACCENT_A or DIM_TEXT_COLOR, Transparency = state and 0 or 0.5 })
+		tween(track, FAST_TWEEN, { BackgroundColor3 = state and SWITCH_ON or SWITCH_OFF })
+		tween(trackStroke, FAST_TWEEN, { Transparency = state and 1 or 0.5 })
+		tween(knob, FAST_TWEEN, {
+			Position = UDim2.new(state and 1 or 0, state and -6 or 6, 0.5, 0),
+			BackgroundColor3 = state and Color3.fromRGB(18, 18, 20) or OFF_TEXT_COLOR,
+		})
 		tween(label, FAST_TWEEN, { TextColor3 = state and TEXT_COLOR or OFF_TEXT_COLOR })
-		tween(accentBar, FAST_TWEEN, { BackgroundTransparency = state and 0 or 1 })
 	end
 
 	if keybind then
 		local keybindName = text .. " Keybind"
 		local keybindButton = create("TextButton", {
-			Size = UDim2.fromOffset(52, 22),
-			Position = UDim2.new(1, -58, 0.5, -11),
+			AnchorPoint = Vector2.new(1, 0.5),
+			Size = UDim2.fromOffset(46, 16),
+			Position = UDim2.new(1, -36, 0.5, 0),
 			BackgroundTransparency = 1,
 			Text = "[" .. keybind .. "]",
 			TextColor3 = DIM_TEXT_COLOR,
-			TextSize = 12,
+			TextSize = 10,
 			Font = TEXT_FONT,
 			TextXAlignment = Enum.TextXAlignment.Right,
 			AutoButtonColor = false,
@@ -400,24 +369,14 @@ local function addToggle(parent, text, keybind, default)
 
 	holder.MouseButton1Down:Connect(function()
 		tween(holder, FAST_TWEEN, { BackgroundTransparency = 0 })
-		tween(stroke, FAST_TWEEN, { Transparency = 0 })
 	end)
 
 	holder.MouseButton1Up:Connect(function()
-		tween(holder, FAST_TWEEN, { BackgroundTransparency = 0.35 })
-		tween(stroke, FAST_TWEEN, { Transparency = 0.55 })
+		tween(holder, FAST_TWEEN, { BackgroundTransparency = 0.05 })
 	end)
 
 	holder.Activated:Connect(function()
 		AngelHub.setters[text](not state)
-	end)
-
-	holder.MouseEnter:Connect(function()
-		tween(label, FAST_TWEEN, { Position = UDim2.fromOffset(36, 0) })
-	end)
-
-	holder.MouseLeave:Connect(function()
-		tween(label, FAST_TWEEN, { Position = UDim2.fromOffset(32, 0) })
 	end)
 
 	table.insert(AngelHub.searchables, holder)
@@ -430,40 +389,40 @@ end
 
 local function addSlider(parent, text, minValue, maxValue, default, decimals)
 	local editableMovement = text == "Speed Value" or text == "Fly Horizontal Speed" or text == "Fly Vertical Speed" or text == "Gravity Value"
-	local holder = createCard("Frame", parent, text, 44)
+	local holder = createCard("Frame", parent, text, 34)
 	local startAlpha = (default - minValue) / (maxValue - minValue)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -70, 0, 20),
-		Position = UDim2.fromOffset(10, 3),
+		Size = UDim2.new(1, -54, 0, 14),
+		Position = UDim2.fromOffset(7, 2),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		TextSize = 11.5,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, holder)
 
 	local valueLabel = create(editableMovement and "TextBox" or "TextLabel", {
-		Size = UDim2.fromOffset(56, 20),
-		Position = UDim2.new(1, -66, 0, 3),
+		Size = UDim2.fromOffset(46, 14),
+		Position = UDim2.new(1, -50, 0, 2),
 		BackgroundTransparency = 1,
 		Text = tostring(default),
-		TextColor3 = OFF_TEXT_COLOR,
-		TextSize = 13,
+		TextColor3 = ACCENT_A,
+		TextSize = 10.5,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Right,
 	}, holder)
 
 	local bar = create("Frame", {
-		Size = UDim2.new(1, -20, 0, 6),
-		Position = UDim2.fromOffset(10, 29),
-		BackgroundColor3 = ELEMENT_COLOR,
+		Size = UDim2.new(1, -14, 0, 4),
+		Position = UDim2.fromOffset(7, 21),
+		BackgroundColor3 = SWITCH_OFF,
 		BorderSizePixel = 0,
 	}, holder)
 
 	create("UICorner", { CornerRadius = UDim.new(1, 0) }, bar)
-	addStroke(bar, Color3.new(1, 1, 1), 0.88)
 
 	local fill = create("Frame", { Size = UDim2.fromScale(startAlpha, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, bar)
 	create("UICorner", { CornerRadius = UDim.new(1, 0) }, fill)
@@ -471,17 +430,16 @@ local function addSlider(parent, text, minValue, maxValue, default, decimals)
 
 	local knob = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Size = UDim2.fromOffset(12, 12),
+		Size = UDim2.fromOffset(10, 10),
 		Position = UDim2.new(startAlpha, 0, 0.5, 0),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
 	}, bar)
 
 	create("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
-	addStroke(knob, ACCENT_A, 0, 2)
 	local knobScale = create("UIScale", {}, knob)
 
-	local hitbox = create("Frame", { Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 21), BackgroundTransparency = 1 }, holder)
+	local hitbox = create("Frame", { Size = UDim2.new(1, -14, 0, 16), Position = UDim2.fromOffset(7, 15), BackgroundTransparency = 1 }, holder)
 
 	AngelHub.values[text] = default
 	AngelHub.defaults[text] = default
@@ -506,7 +464,11 @@ local function addSlider(parent, text, minValue, maxValue, default, decimals)
 		valueLabel.ClearTextOnFocus = false
 		valueLabel.FocusLost:Connect(function()
 			local value = tonumber(valueLabel.Text)
-			if value then AngelHub.setters[text](value) else valueLabel.Text = tostring(AngelHub.values[text]) end
+			if value then
+				AngelHub.setters[text](value)
+			else
+				valueLabel.Text = tostring(AngelHub.values[text])
+			end
 		end)
 	end
 
@@ -521,8 +483,8 @@ local function addSlider(parent, text, minValue, maxValue, default, decimals)
 		end
 
 		dragging = true
-		tween(knobScale, POP_TWEEN, { Scale = 1.35 })
-		tween(valueLabel, FAST_TWEEN, { TextColor3 = ACCENT_A })
+		tween(knobScale, POP_TWEEN, { Scale = 1.3 })
+		tween(valueLabel, FAST_TWEEN, { TextColor3 = TEXT_COLOR })
 		updateFromX(input.Position.X)
 	end)
 
@@ -539,7 +501,7 @@ local function addSlider(parent, text, minValue, maxValue, default, decimals)
 
 		dragging = false
 		tween(knobScale, POP_TWEEN, { Scale = 1 })
-		tween(valueLabel, FAST_TWEEN, { TextColor3 = OFF_TEXT_COLOR })
+		tween(valueLabel, FAST_TWEEN, { TextColor3 = ACCENT_A })
 	end)
 
 	table.insert(AngelHub.searchables, holder)
@@ -547,33 +509,58 @@ local function addSlider(parent, text, minValue, maxValue, default, decimals)
 end
 
 local function addCycle(parent, text, options, onChange)
-	local holder = createCard("Frame", parent, text, 56)
+	local holder = createCard("Frame", parent, text, 24)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -20, 0, 20),
-		Position = UDim2.fromOffset(10, 3),
+		Size = UDim2.new(1, -104, 1, 0),
+		Position = UDim2.fromOffset(7, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		TextSize = 11.5,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, holder)
 
 	local button = create("TextButton", {
-		Size = UDim2.new(1, -20, 0, 24),
-		Position = UDim2.fromOffset(10, 26),
-		BackgroundColor3 = ELEMENT_COLOR,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.fromOffset(96, 18),
+		Position = UDim2.new(1, -4, 0.5, 0),
+		BackgroundColor3 = PANEL_SOFT,
 		BorderSizePixel = 0,
 		Text = options[1],
-		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		TextColor3 = OFF_TEXT_COLOR,
+		TextSize = 10.5,
 		Font = TEXT_FONT,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		AutoButtonColor = false,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 4) }, button)
-	local buttonStroke = addStroke(button, DIM_TEXT_COLOR, 0.6)
+	create("UICorner", { CornerRadius = UDim.new(0, 5) }, button)
+	create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, button)
+	local buttonStroke = addStroke(button, STROKE_COLOR, 0.3)
+
+	-- Chevron pair: reads as "cycle left / cycle right" without extra buttons.
+	for _, side in { { -1, 6 }, { 1, -6 } } do
+		local chevron = create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(5, 5),
+			Position = UDim2.new(side[1] > 0 and 1 or 0, side[2], 0.5, 0),
+			BackgroundTransparency = 1,
+		}, button)
+
+		for _, angle in { 45, -45 } do
+			create("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Size = UDim2.new(1, 0, 0, 1),
+				Position = UDim2.new(0.5, 0, angle == 45 and 0.3 or 0.7, 0),
+				Rotation = angle,
+				BackgroundColor3 = DIM_TEXT_COLOR,
+				BorderSizePixel = 0,
+			}, chevron)
+		end
+	end
 
 	local index = 1
 	AngelHub.values[text] = options[1]
@@ -598,20 +585,27 @@ local function addCycle(parent, text, options, onChange)
 		if type(items) ~= "table" then return end
 		local nextOptions = {}
 		for _, item in ipairs(items) do
-			if type(item)=="string" and item~="" and not table.find(nextOptions,item) then table.insert(nextOptions,item) end
+			if type(item) == "string" and item ~= "" and not table.find(nextOptions, item) then
+				table.insert(nextOptions, item)
+			end
 		end
-		if #nextOptions==0 then nextOptions={"Waiting for maps"} end
-		local selected=AngelHub.values[text]
-		options=nextOptions;index=table.find(options,selected) or 1
+		if #nextOptions == 0 then
+			nextOptions = { "Waiting for maps" }
+		end
+		local selected = AngelHub.values[text]
+		options = nextOptions
+		index = table.find(options, selected) or 1
 		AngelHub.setters[text](options[index])
 	end
 
 	button.MouseEnter:Connect(function()
 		tween(buttonStroke, FAST_TWEEN, { Color = ACCENT_A, Transparency = 0 })
+		tween(button, FAST_TWEEN, { TextColor3 = TEXT_COLOR })
 	end)
 
 	button.MouseLeave:Connect(function()
-		tween(buttonStroke, FAST_TWEEN, { Color = DIM_TEXT_COLOR, Transparency = 0.6 })
+		tween(buttonStroke, FAST_TWEEN, { Color = STROKE_COLOR, Transparency = 0.3 })
+		tween(button, FAST_TWEEN, { TextColor3 = OFF_TEXT_COLOR })
 	end)
 
 	button.Activated:Connect(function()
@@ -631,44 +625,46 @@ local function addCycle(parent, text, options, onChange)
 end
 
 local function addButton(parent, text, callback)
-	local holder = createCard("Frame", parent, text, 34)
+	local holder = createCard("Frame", parent, text, 24)
 
 	local button = create("TextButton", {
-		Size = UDim2.new(1, -16, 0, 24),
-		Position = UDim2.fromOffset(8, 5),
-		BackgroundColor3 = ELEMENT_COLOR,
+		Size = UDim2.new(1, -8, 1, -4),
+		Position = UDim2.fromOffset(4, 2),
+		BackgroundColor3 = PANEL_SOFT,
 		BorderSizePixel = 0,
-		Text = pendingButtons[text] and (text.." (pendiente)") or (text=="Get All Emotes" and "Get All Emotes (local)" or text),
-		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		Text = pendingButtons[text] and (text .. " (pendiente)") or (text == "Get All Emotes" and "Get All Emotes (local)" or text),
+		TextColor3 = OFF_TEXT_COLOR,
+		TextSize = 11,
 		Font = TEXT_FONT,
 		AutoButtonColor = false,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 4) }, button)
-	local buttonStroke = addStroke(button, DIM_TEXT_COLOR, 0.6)
+	create("UICorner", { CornerRadius = UDim.new(0, 6) }, button)
+	local buttonStroke = addStroke(button, STROKE_COLOR, 0.3)
 
 	button.MouseEnter:Connect(function()
 		tween(buttonStroke, FAST_TWEEN, { Color = ACCENT_A, Transparency = 0 })
-		tween(button, FAST_TWEEN, { BackgroundColor3 = Color3.fromRGB(28, 28, 30) })
+		tween(button, FAST_TWEEN, { TextColor3 = TEXT_COLOR })
 	end)
 
 	button.MouseLeave:Connect(function()
-		tween(buttonStroke, FAST_TWEEN, { Color = DIM_TEXT_COLOR, Transparency = 0.6 })
-		tween(button, FAST_TWEEN, { BackgroundColor3 = ELEMENT_COLOR })
+		tween(buttonStroke, FAST_TWEEN, { Color = STROKE_COLOR, Transparency = 0.3 })
+		tween(button, FAST_TWEEN, { TextColor3 = OFF_TEXT_COLOR })
 	end)
 
 	button.MouseButton1Down:Connect(function()
-		tween(button, FAST_TWEEN, { BackgroundColor3 = Color3.fromRGB(46, 46, 48) })
+		tween(button, FAST_TWEEN, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(30, 30, 34) })
 	end)
 
 	button.MouseButton1Up:Connect(function()
-		tween(button, FAST_TWEEN, { BackgroundColor3 = Color3.fromRGB(28, 28, 30) })
+		tween(button, FAST_TWEEN, { BackgroundTransparency = 0.15, BackgroundColor3 = PANEL_SOFT })
 	end)
 
 	button.Activated:Connect(function()
-		local action=callback or AngelHub.actions[text]
-		if action then action() end
+		local action = callback or AngelHub.actions[text]
+		if action then
+			action()
+		end
 	end)
 
 	table.insert(AngelHub.searchables, holder)
@@ -676,42 +672,44 @@ local function addButton(parent, text, callback)
 end
 
 local function addText(parent, text, placeholder, default)
-	local holder = createCard("Frame", parent, text, 34)
+	local holder = createCard("Frame", parent, text, 24)
 
 	create("TextLabel", {
-		Size = UDim2.new(0.42, -8, 1, 0),
-		Position = UDim2.fromOffset(8, 0),
+		Size = UDim2.new(0.44, -8, 1, 0),
+		Position = UDim2.fromOffset(7, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
-		TextSize = 12,
+		TextSize = 11,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, holder)
 
 	local box = create("TextBox", {
-		Size = UDim2.new(0.58, -12, 0, 22),
-		Position = UDim2.new(0.42, 0, 0.5, -11),
-		BackgroundColor3 = ELEMENT_COLOR,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.new(0.56, -8, 0, 18),
+		Position = UDim2.new(1, -4, 0.5, 0),
+		BackgroundColor3 = PANEL_SOFT,
 		BorderSizePixel = 0,
 		PlaceholderText = placeholder or "",
 		PlaceholderColor3 = DIM_TEXT_COLOR,
 		Text = default or "",
 		TextColor3 = TEXT_COLOR,
-		TextSize = 12,
+		TextSize = 10.5,
 		Font = TEXT_FONT,
 		ClearTextOnFocus = false,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 4) }, box)
-	local boxStroke = addStroke(box, DIM_TEXT_COLOR, 0.6)
+	create("UICorner", { CornerRadius = UDim.new(0, 5) }, box)
+	local boxStroke = addStroke(box, STROKE_COLOR, 0.3)
 
 	box.Focused:Connect(function()
 		tween(boxStroke, FAST_TWEEN, { Color = ACCENT_A, Transparency = 0 })
 	end)
 
 	box.FocusLost:Connect(function()
-		tween(boxStroke, FAST_TWEEN, { Color = DIM_TEXT_COLOR, Transparency = 0.6 })
+		tween(boxStroke, FAST_TWEEN, { Color = STROKE_COLOR, Transparency = 0.3 })
 	end)
 
 	AngelHub.values[text] = default or ""
@@ -731,33 +729,35 @@ local function addText(parent, text, placeholder, default)
 end
 
 local function addKeybind(parent, text, default)
-	local holder = createCard("Frame", parent, text, 28)
+	local holder = createCard("Frame", parent, text, 24)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -70, 1, 0),
-		Position = UDim2.fromOffset(8, 0),
+		Size = UDim2.new(1, -76, 1, 0),
+		Position = UDim2.fromOffset(7, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		TextSize = 11.5,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, holder)
 
 	local keybindButton = create("TextButton", {
-		Size = UDim2.fromOffset(58, 22),
-		Position = UDim2.new(1, -64, 0.5, -11),
-		BackgroundColor3 = ELEMENT_COLOR,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.fromOffset(64, 18),
+		Position = UDim2.new(1, -4, 0.5, 0),
+		BackgroundColor3 = PANEL_SOFT,
 		BorderSizePixel = 0,
 		Text = default and ("[" .. default .. "]") or "[None]",
-		TextColor3 = DIM_TEXT_COLOR,
-		TextSize = 12,
+		TextColor3 = OFF_TEXT_COLOR,
+		TextSize = 10,
 		Font = TEXT_FONT,
 		AutoButtonColor = false,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 4) }, keybindButton)
-	addStroke(keybindButton, DIM_TEXT_COLOR, 0.6)
+	create("UICorner", { CornerRadius = UDim.new(0, 5) }, keybindButton)
+	addStroke(keybindButton, STROKE_COLOR, 0.3)
 
 	local keybindName = text .. " Value"
 	AngelHub.defaults[keybindName] = default
@@ -796,22 +796,24 @@ local function addKeybind(parent, text, default)
 end
 
 local function addColor(parent, text, default)
-	local holder = createCard("Frame", parent, text, 28)
+	local holder = createCard("Frame", parent, text, 24)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -46, 1, 0),
-		Position = UDim2.fromOffset(8, 0),
+		Size = UDim2.new(1, -40, 1, 0),
+		Position = UDim2.fromOffset(7, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		TextSize = 11.5,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, holder)
 
 	local swatch = create("TextButton", {
-		Size = UDim2.fromOffset(28, 18),
-		Position = UDim2.new(1, -36, 0.5, -9),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.fromOffset(22, 14),
+		Position = UDim2.new(1, -4, 0.5, 0),
 		BackgroundColor3 = default or COLOR_PRESETS[1],
 		BorderSizePixel = 0,
 		Text = "",
@@ -819,7 +821,7 @@ local function addColor(parent, text, default)
 	}, holder)
 
 	create("UICorner", { CornerRadius = UDim.new(0, 4) }, swatch)
-	addStroke(swatch, Color3.new(1, 1, 1), 0.5)
+	addStroke(swatch, Color3.new(1, 1, 1), 0.6)
 
 	local index = 1
 	AngelHub.values[text] = default or COLOR_PRESETS[1]
@@ -841,90 +843,106 @@ end
 
 local function addList(parent, text, items, height)
 	height = height or 90
-	local holder = createCard("Frame", parent, text, height + 24)
+	local holder = createCard("Frame", parent, text, height + 20)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -16, 0, 18),
-		Position = UDim2.fromOffset(8, 2),
+		Size = UDim2.new(1, -14, 0, 14),
+		Position = UDim2.fromOffset(7, 1),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
-		TextSize = 12,
+		TextSize = 10.5,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, holder)
 
 	local scroller = create("ScrollingFrame", {
-		Size = UDim2.new(1, -16, 0, height),
-		Position = UDim2.fromOffset(8, 22),
-		BackgroundColor3 = ELEMENT_COLOR,
-		BackgroundTransparency = 0.3,
+		Size = UDim2.new(1, -14, 0, height),
+		Position = UDim2.fromOffset(7, 17),
+		BackgroundColor3 = PANEL_SOFT,
+		BackgroundTransparency = 0.2,
 		BorderSizePixel = 0,
-		ScrollBarThickness = 3,
+		ScrollBarThickness = 2,
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 4) }, scroller)
-	create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }, scroller)
+	create("UICorner", { CornerRadius = UDim.new(0, 5) }, scroller)
+	create("UIListLayout", { Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder }, scroller)
 	create("UIPadding", { PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2) }, scroller)
 
-    local rows = {}
-    AngelHub.values[text] = items[1]
-    AngelHub.defaults[text] = items[1]
-    local function selectItem(name)
-        if name ~= nil and not rows[name] then return false end
-        AngelHub.values[text] = name
-        for itemName, row in pairs(rows) do row.BackgroundTransparency = itemName == name and 0.5 or 1 end
-    end
-    local function refresh(itemsNow)
-        if type(itemsNow) ~= "table" then return end
-        local selected = AngelHub.values[text]
-        for _, row in pairs(rows) do row:Destroy() end
-        table.clear(rows)
-        local first
-        for _, itemName in ipairs(itemsNow) do
-            if type(itemName) == "string" and itemName ~= "" and not rows[itemName] then
-                local row = create("TextButton", {
-                    Size = UDim2.new(1, -4, 0, 20), BackgroundColor3 = ACCENT_A, BackgroundTransparency = 1,
-                    BorderSizePixel = 0, Text = itemName, TextColor3 = TEXT_COLOR, TextSize = 12,
-                    Font = TEXT_FONT, AutoButtonColor = false,
-                }, scroller)
-                create("UICorner", { CornerRadius = UDim.new(0, 3) }, row)
-                rows[itemName] = row; first = first or itemName
-                row.Activated:Connect(function() selectItem(itemName) end)
-            end
-        end
-        selectItem(rows[selected] and selected or first)
-    end
-    AngelHub.setters[text] = selectItem
-    AngelHub.listOptions[text] = refresh
-    refresh(items)
+	local rows = {}
+	AngelHub.values[text] = items[1]
+	AngelHub.defaults[text] = items[1]
+
+	local function selectItem(name)
+		if name ~= nil and not rows[name] then return false end
+		AngelHub.values[text] = name
+		for itemName, row in pairs(rows) do
+			row.BackgroundTransparency = itemName == name and 0.6 or 1
+		end
+	end
+
+	local function refresh(itemsNow)
+		if type(itemsNow) ~= "table" then return end
+		local selected = AngelHub.values[text]
+		for _, row in pairs(rows) do
+			row:Destroy()
+		end
+		table.clear(rows)
+
+		local first
+		for _, itemName in ipairs(itemsNow) do
+			if type(itemName) == "string" and itemName ~= "" and not rows[itemName] then
+				local row = create("TextButton", {
+					Size = UDim2.new(1, -4, 0, 16), BackgroundColor3 = ACCENT_A, BackgroundTransparency = 1,
+					BorderSizePixel = 0, Text = itemName, TextColor3 = OFF_TEXT_COLOR, TextSize = 10,
+					Font = TEXT_FONT, AutoButtonColor = false, TextXAlignment = Enum.TextXAlignment.Left,
+				}, scroller)
+
+				create("UICorner", { CornerRadius = UDim.new(0, 3) }, row)
+				create("UIPadding", { PaddingLeft = UDim.new(0, 4) }, row)
+				rows[itemName] = row
+				first = first or itemName
+				row.Activated:Connect(function()
+					selectItem(itemName)
+				end)
+			end
+		end
+
+		selectItem(rows[selected] and selected or first)
+	end
+
+	AngelHub.setters[text] = selectItem
+	AngelHub.listOptions[text] = refresh
+	refresh(items)
+
 	table.insert(AngelHub.searchables, holder)
 	return holder
 end
 
 local function addCounter(parent, text, default)
-	local holder = createCard("Frame", parent, text, 26)
+	local holder = createCard("Frame", parent, text, 22)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -60, 1, 0),
-		Position = UDim2.fromOffset(8, 0),
+		Size = UDim2.new(1, -50, 1, 0),
+		Position = UDim2.fromOffset(7, 0),
 		BackgroundTransparency = 1,
 		Text = text,
-		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		TextColor3 = OFF_TEXT_COLOR,
+		TextSize = 10.5,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, holder)
 
 	local valueLabel = create("TextLabel", {
-		Size = UDim2.fromOffset(50, 20),
-		Position = UDim2.new(1, -58, 0.5, -10),
+		Size = UDim2.fromOffset(42, 16),
+		Position = UDim2.new(1, -46, 0.5, -8),
 		BackgroundTransparency = 1,
 		Text = tostring(default or 0),
 		TextColor3 = ACCENT_A,
-		TextSize = 13,
+		TextSize = 11,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Right,
 	}, holder)
@@ -943,29 +961,31 @@ end
 
 local function beginGroup(parent, text, open)
 	local group = { cards = {}, collapsed = not open }
-	local holder = createCard("Frame", parent, text .. " Options", 30)
+	local holder = createCard("Frame", parent, text .. " Options", 24)
 
 	local button = create("TextButton", {
-		Size = UDim2.new(1, -16, 0, 22),
-		Position = UDim2.fromOffset(8, 4),
-		BackgroundColor3 = ELEMENT_COLOR,
+		Size = UDim2.new(1, -8, 1, -4),
+		Position = UDim2.fromOffset(4, 2),
+		BackgroundColor3 = PANEL_SOFT,
 		BorderSizePixel = 0,
 		Text = (open and "-  Hide " or "+  Show ") .. text,
 		TextColor3 = OFF_TEXT_COLOR,
-		TextSize = 12,
+		TextSize = 10.5,
 		Font = TEXT_FONT,
 		AutoButtonColor = false,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 4) }, button)
-	local buttonStroke = addStroke(button, DIM_TEXT_COLOR, 0.6)
+	create("UICorner", { CornerRadius = UDim.new(0, 6) }, button)
+	local buttonStroke = addStroke(button, STROKE_COLOR, 0.3)
 
 	button.MouseEnter:Connect(function()
 		tween(buttonStroke, FAST_TWEEN, { Color = ACCENT_A, Transparency = 0 })
+		tween(button, FAST_TWEEN, { TextColor3 = TEXT_COLOR })
 	end)
 
 	button.MouseLeave:Connect(function()
-		tween(buttonStroke, FAST_TWEEN, { Color = DIM_TEXT_COLOR, Transparency = 0.6 })
+		tween(buttonStroke, FAST_TWEEN, { Color = STROKE_COLOR, Transparency = 0.3 })
+		tween(button, FAST_TWEEN, { TextColor3 = OFF_TEXT_COLOR })
 	end)
 
 	button.Activated:Connect(function()
@@ -992,16 +1012,16 @@ local function createSectionColumn(parent, layoutOrder)
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		ScrollBarThickness = 3,
+		ScrollBarThickness = 2,
 		ScrollBarImageColor3 = ACCENT_A,
-		ScrollBarImageTransparency = 0.4,
+		ScrollBarImageTransparency = 0.5,
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		LayoutOrder = layoutOrder,
 	}, parent)
 
-	create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, frame)
-	create("UIPadding", { PaddingRight = UDim.new(0, 8) }, frame)
+	create("UIListLayout", { Padding = UDim.new(0, SECTION_GAP), SortOrder = Enum.SortOrder.LayoutOrder }, frame)
+	create("UIPadding", { PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) }, frame)
 
 	return { frame = frame, box = nil }
 end
@@ -1102,8 +1122,8 @@ local function switchTab(name)
 			local accent = button:FindFirstChild("Accent")
 
 			tween(button, FAST_TWEEN, {
-				BackgroundColor3 = ELEMENT_COLOR,
-				BackgroundTransparency = selected and 0 or 1,
+				BackgroundColor3 = PANEL_SOFT,
+				BackgroundTransparency = selected and 0.2 or 1,
 			})
 
 			if label then
@@ -1127,10 +1147,17 @@ local function switchTab(name)
 		AngelHub.headerLabel.Text = name
 	end
 
-	-- Reveal the group that owns the sub-tab we just opened.
+	local header = AngelHub.headerLabel and AngelHub.headerLabel.Parent
+	local groupLabel = header and header:FindFirstChild("HeaderGroup")
+	if groupLabel then
+		groupLabel.Text = string.upper(AngelHub.tabGroup[name] or "")
+	end
+
+	-- Reveal the group that owns the sub-tab we just opened and fold the rest,
+	-- so the rail always fits the window.
 	local groupName = AngelHub.tabGroup[name]
 	if groupName and AngelHub.expandNavGroup then
-		AngelHub.expandNavGroup(groupName)
+		AngelHub.expandNavGroup(groupName, name)
 	end
 end
 
@@ -11645,42 +11672,46 @@ local function initializeScript()
 		ClipsDescendants = true,
 	}, screenGui)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 8) }, window)
+	create("UICorner", { CornerRadius = UDim.new(0, 10) }, window)
 	create("UIGradient", { Color = ColorSequence.new(BACKGROUND_TOP, BACKGROUND_BOTTOM), Rotation = 90 }, window)
 
-	local windowStroke = addStroke(window, Color3.new(1, 1, 1), 0.2, 1.5)
+	local windowStroke = addStroke(window, Color3.new(1, 1, 1), 0.32, 1)
 	addGradient(windowStroke, 45)
 
 	local windowScale = create("UIScale", { Scale = 0.85 }, window)
 	tween(windowScale, POP_TWEEN, { Scale = 1 })
 
-	local sheen = create("Frame", { Size = UDim2.new(1, 0, 0, 140), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, window)
-	create("UIGradient", { Transparency = NumberSequence.new(0.965, 1), Rotation = 90 }, sheen)
+	local sheen = create("Frame", { Size = UDim2.new(1, 0, 0, 90), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, window)
+	create("UIGradient", { Transparency = NumberSequence.new(0.975, 1), Rotation = 90 }, sheen)
 
 	local titleBar = create("Frame", { Size = UDim2.new(1, 0, 0, TITLE_HEIGHT), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, window)
 	local titleGradient = addGradient(titleBar, 0)
-	titleGradient.Transparency = NumberSequence.new(0.8, 0.92)
+	titleGradient.Transparency = NumberSequence.new(0.88, 0.96)
 
 	local titleLine = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 1),
 		Position = UDim2.new(0, 0, 1, -1),
 		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0.75,
 		BorderSizePixel = 0,
 	}, titleBar)
 
-	addGradient(titleLine, 0)
-
 	create("TextLabel", {
-		Size = UDim2.new(1, -260, 1, 0),
+		Size = UDim2.new(1, -140, 1, 0),
 		Position = UDim2.fromOffset(12, 0),
 		BackgroundTransparency = 1,
 		RichText = true,
 		Text = "<b>" .. TITLE_TEXT .. "</b>",
 		TextColor3 = TEXT_COLOR,
-		TextSize = 14,
+		TextSize = 12,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, titleBar)
+
+	local minimizeButton = createTitleButton(titleBar, "-", -56, ACCENT_B)
+	local closeButton = createTitleButton(titleBar, "X", -30, Color3.fromRGB(230, 60, 70))
+
+	makeDraggable(titleBar, window)
 
 	local minimizeButton = createTitleButton(titleBar, "-", -60, ACCENT_B)
 	local closeButton = createTitleButton(titleBar, "X", -32, Color3.fromRGB(230, 60, 70))
@@ -11703,52 +11734,46 @@ local function initializeScript()
 		end)
 	end)
 
-	-- Left rail: brand, live stats, search, grouped sub-tabs and player card.
-	local rail = create("ScrollingFrame", {
+	-- Rail: brand, live stats, search, grouped sub-tabs and the player card.
+	local rail = create("Frame", {
 		Name = "NavigationRail",
 		Size = UDim2.new(0, RAIL_WIDTH, 1, -TITLE_HEIGHT),
 		Position = UDim2.fromOffset(0, TITLE_HEIGHT),
-		BackgroundColor3 = Color3.fromRGB(13, 13, 15),
-		BackgroundTransparency = 0.3,
+		BackgroundColor3 = Color3.fromRGB(11, 11, 13),
+		BackgroundTransparency = 0.25,
 		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
-		CanvasSize = UDim2.new(),
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		ScrollingDirection = Enum.ScrollingDirection.Y,
 	}, window)
 
 	create("UIPadding", {
-		PaddingTop = UDim.new(0, 8),
-		PaddingBottom = UDim.new(0, 10),
-		PaddingLeft = UDim.new(0, 8),
-		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 6),
+		PaddingBottom = UDim.new(0, 6),
+		PaddingLeft = UDim.new(0, 6),
+		PaddingRight = UDim.new(0, 6),
 	}, rail)
-	create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, rail)
 
-	-- Divider between the rail and the content pane.
 	create("Frame", {
 		Name = "RailEdge",
 		Size = UDim2.new(0, 1, 1, -TITLE_HEIGHT),
 		Position = UDim2.fromOffset(RAIL_WIDTH, TITLE_HEIGHT),
 		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.86,
+		BackgroundTransparency = 0.9,
 		BorderSizePixel = 0,
 	}, window)
 
-	-- Brand mark: a four-point spark built from primitives, no image needed.
-	local brand = create("Frame", { Name = "Brand", Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 1 }, rail)
+	-- Compact brand row: spark mark, name, version.
+	local brand = create("Frame", { Name = "Brand", Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1 }, rail)
 
 	local mark = create("Frame", {
-		Size = UDim2.fromOffset(24, 24),
-		Position = UDim2.new(0, 0, 0.5, -12),
-		BackgroundColor3 = Color3.fromRGB(240, 240, 242),
+		Size = UDim2.fromOffset(20, 20),
+		Position = UDim2.new(0, 0, 0.5, -10),
+		BackgroundColor3 = Color3.fromRGB(238, 238, 240),
 		BorderSizePixel = 0,
 	}, brand)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 7) }, mark)
+	create("UICorner", { CornerRadius = UDim.new(0, 6) }, mark)
 	addGradient(mark, 45)
 
-	for _, sparkSize in { UDim2.fromOffset(2, 14), UDim2.fromOffset(14, 2) } do
+	for _, sparkSize in { UDim2.fromOffset(2, 11), UDim2.fromOffset(11, 2) } do
 		create("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Size = sparkSize,
@@ -11759,45 +11784,45 @@ local function initializeScript()
 	end
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -32, 0, 16),
-		Position = UDim2.fromOffset(32, 0),
+		Size = UDim2.new(1, -52, 1, 0),
+		Position = UDim2.fromOffset(26, 0),
 		BackgroundTransparency = 1,
 		Text = "Zenith Hub",
 		TextColor3 = TEXT_COLOR,
-		TextSize = 14,
+		TextSize = 12,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, brand)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -32, 0, 12),
-		Position = UDim2.fromOffset(32, 16),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.fromOffset(40, 12),
+		Position = UDim2.new(1, 0, 0.5, 0),
 		BackgroundTransparency = 1,
-		Text = "v1.0  |  MM2",
+		Text = "v1.0",
 		TextColor3 = DIM_TEXT_COLOR,
-		TextSize = 10,
+		TextSize = 9,
 		Font = TEXT_FONT,
-		TextXAlignment = Enum.TextXAlignment.Left,
+		TextXAlignment = Enum.TextXAlignment.Right,
 	}, brand)
 
-	-- Live fps / ping pills, refreshed once per second.
-	local statsRow = create("Frame", { Name = "Stats", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = 2 }, rail)
+	-- Live fps / ping pills.
+	local statsRow = create("Frame", { Name = "Stats", Size = UDim2.new(1, 0, 0, 15), Position = UDim2.fromOffset(0, 28), BackgroundTransparency = 1 }, rail)
 
 	local function createStatPill(offset)
 		local pill = create("Frame", {
-			Size = UDim2.fromOffset(78, 18),
+			Size = UDim2.fromOffset(70, 15),
 			Position = UDim2.fromOffset(offset, 0),
-			BackgroundColor3 = ELEMENT_COLOR,
-			BackgroundTransparency = 0.45,
+			BackgroundColor3 = PANEL_SOFT,
+			BackgroundTransparency = 0.25,
 			BorderSizePixel = 0,
 		}, statsRow)
 
 		create("UICorner", { CornerRadius = UDim.new(0, 4) }, pill)
-		addStroke(pill, ACCENT_A, 1)
 
 		local dot = create("Frame", {
-			Size = UDim2.fromOffset(5, 5),
-			Position = UDim2.new(0, 7, 0.5, -2),
+			Size = UDim2.fromOffset(4, 4),
+			Position = UDim2.new(0, 6, 0.5, -2),
 			BackgroundColor3 = Color3.fromRGB(120, 230, 150),
 			BorderSizePixel = 0,
 		}, pill)
@@ -11805,12 +11830,12 @@ local function initializeScript()
 		create("UICorner", { CornerRadius = UDim.new(1, 0) }, dot)
 
 		local label = create("TextLabel", {
-			Size = UDim2.new(1, -18, 1, 0),
-			Position = UDim2.fromOffset(15, 0),
+			Size = UDim2.new(1, -16, 1, 0),
+			Position = UDim2.fromOffset(13, 0),
 			BackgroundTransparency = 1,
 			Text = "--",
 			TextColor3 = OFF_TEXT_COLOR,
-			TextSize = 11,
+			TextSize = 9.5,
 			Font = TEXT_FONT,
 			TextXAlignment = Enum.TextXAlignment.Left,
 		}, pill)
@@ -11819,67 +11844,73 @@ local function initializeScript()
 	end
 
 	local fpsLabel, fpsDot = createStatPill(0)
-	local pingLabel, pingDot = createStatPill(84)
+	local pingLabel, pingDot = createStatPill(76)
 
 	local searchBox = create("TextBox", {
-		Size = UDim2.new(1, 0, 0, 26),
-		BackgroundColor3 = ELEMENT_COLOR,
-		BackgroundTransparency = 0.2,
+		Size = UDim2.new(1, 0, 0, 22),
+		Position = UDim2.fromOffset(0, 48),
+		BackgroundColor3 = PANEL_SOFT,
+		BackgroundTransparency = 0.1,
 		BorderSizePixel = 0,
 		PlaceholderText = "Search settings",
 		PlaceholderColor3 = DIM_TEXT_COLOR,
 		Text = "",
-		TextColor3 = TEXT_COLOR,
-		TextSize = 12,
+		TextColor3 = OFF_TEXT_COLOR,
+		TextSize = 10.5,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ClearTextOnFocus = false,
-		LayoutOrder = 3,
 	}, rail)
 
 	create("UICorner", { CornerRadius = UDim.new(0, 5) }, searchBox)
-	create("UIPadding", { PaddingLeft = UDim.new(0, 24) }, searchBox)
-	local searchStroke = addStroke(searchBox, ACCENT_A, 1)
+	create("UIPadding", { PaddingLeft = UDim.new(0, 20) }, searchBox)
+	local searchStroke = addStroke(searchBox, STROKE_COLOR, 1)
 
-	-- Magnifier glyph: stroked circle plus a short handle.
 	local lens = create("Frame", {
-		Size = UDim2.fromOffset(8, 8),
-		Position = UDim2.new(0, 9, 0.5, -5),
+		Size = UDim2.fromOffset(6, 6),
+		Position = UDim2.new(0, 8, 0.5, -4),
 		BackgroundTransparency = 1,
 	}, searchBox)
 
 	create("UICorner", { CornerRadius = UDim.new(1, 0) }, lens)
-	addStroke(lens, DIM_TEXT_COLOR, 0.25)
+	addStroke(lens, DIM_TEXT_COLOR, 0.2)
 
 	create("Frame", {
-		Size = UDim2.fromOffset(1.5, 5),
-		Position = UDim2.new(0, 6, 0.5, 3),
+		Size = UDim2.fromOffset(1, 4),
+		Position = UDim2.new(0, 5.5, 0.5, 3),
 		Rotation = -45,
 		BackgroundColor3 = DIM_TEXT_COLOR,
-		BackgroundTransparency = 0.25,
+		BackgroundTransparency = 0.2,
 		BorderSizePixel = 0,
 	}, lens)
 
 	searchBox.Focused:Connect(function()
-		tween(searchStroke, FAST_TWEEN, { Transparency = 0 })
+		tween(searchStroke, FAST_TWEEN, { Color = ACCENT_A, Transparency = 0 })
 	end)
 
 	searchBox.FocusLost:Connect(function()
-		tween(searchStroke, FAST_TWEEN, { Transparency = 1 })
+		tween(searchStroke, FAST_TWEEN, { Color = STROKE_COLOR, Transparency = 1 })
 	end)
 
-	-- The navigation is positioned by hand: every row has a known height, so a
-	-- collapse can be resolved without relying on nested AutomaticSize.
-	local NAV_HEADER_HEIGHT = 20
-	local NAV_ROW_HEIGHT = 24
-	local NAV_ROW_GAP = 2
-	local NAV_BLOCK_GAP = 6
+	-- Navigation rows are positioned by hand: every row has a known height, so a
+	-- collapse resolves without relying on nested AutomaticSize.
+	local NAV_HEADER_HEIGHT = 16
+	local NAV_ROW_HEIGHT = 19
+	local NAV_ROW_GAP = 1
+	local NAV_BLOCK_GAP = 4
 
-	local navList = create("Frame", {
+	-- Scrolling keeps the whole navigation reachable in a short window; the
+	-- content height is assigned by relayoutNavigation.
+	local navList = create("ScrollingFrame", {
 		Name = "Navigation",
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(1, 0, 1, -76),
+		Position = UDim2.fromOffset(0, 76),
 		BackgroundTransparency = 1,
-		LayoutOrder = 4,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
 	}, rail)
 
 	local navBlocks = {}
@@ -11896,7 +11927,8 @@ local function initializeScript()
 			cursor += height + NAV_BLOCK_GAP
 		end
 
-		navList.Size = UDim2.new(1, 0, 0, math.max(cursor - NAV_BLOCK_GAP, 0))
+		-- Canvas height only: the frame itself stays anchored under the search.
+		navList.CanvasSize = UDim2.new(0, 0, 0, math.max(cursor - NAV_BLOCK_GAP, 0))
 	end
 
 	-- Content pane: sub-tab header on top, paged grid underneath.
@@ -11907,8 +11939,8 @@ local function initializeScript()
 	}, window)
 
 	create("UIPadding", {
-		PaddingTop = UDim.new(0, 8),
-		PaddingBottom = UDim.new(0, 10),
+		PaddingTop = UDim.new(0, 6),
+		PaddingBottom = UDim.new(0, 8),
 		PaddingLeft = UDim.new(0, 10),
 		PaddingRight = UDim.new(0, 10),
 	}, content)
@@ -11916,17 +11948,16 @@ local function initializeScript()
 	local header = create("Frame", { Name = "ContentHeader", Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1 }, content)
 
 	local headerIcon = create("Frame", {
-		Size = UDim2.fromOffset(24, 24),
-		Position = UDim2.new(0, 0, 0.5, -12),
-		BackgroundColor3 = ELEMENT_COLOR,
+		Size = UDim2.fromOffset(22, 22),
+		Position = UDim2.new(0, 0, 0.5, -11),
+		BackgroundColor3 = PANEL_SOFT,
 		BorderSizePixel = 0,
 	}, header)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 7) }, headerIcon)
-	addStroke(headerIcon, ACCENT_A, 0.6)
+	create("UICorner", { CornerRadius = UDim.new(0, 6) }, headerIcon)
+	addStroke(headerIcon, STROKE_COLOR, 0.4)
 
-	-- Four-point spark, same mark as the rail brand.
-	for _, sparkSize in { UDim2.fromOffset(2, 12), UDim2.fromOffset(12, 2) } do
+	for _, sparkSize in { UDim2.fromOffset(2, 10), UDim2.fromOffset(10, 2) } do
 		create("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Size = sparkSize,
@@ -11936,29 +11967,32 @@ local function initializeScript()
 		}, headerIcon)
 	end
 
+	create("TextLabel", {
+		Size = UDim2.new(1, -34, 0, 9),
+		Position = UDim2.fromOffset(30, 3),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = DIM_TEXT_COLOR,
+		TextSize = 8.5,
+		Font = BOLD_FONT,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, header).Name = "HeaderGroup"
+
 	AngelHub.headerLabel = create("TextLabel", {
-		Size = UDim2.new(1, -34, 1, 0),
-		Position = UDim2.fromOffset(34, 0),
+		Size = UDim2.new(1, -34, 0, 16),
+		Position = UDim2.fromOffset(30, 12),
 		BackgroundTransparency = 1,
 		Text = "",
 		TextColor3 = TEXT_COLOR,
-		TextSize = 15,
+		TextSize = 13,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, header)
 
-	create("Frame", {
-		Size = UDim2.new(1, 0, 0, 1),
-		Position = UDim2.new(0, 0, 1, 0),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.88,
-		BorderSizePixel = 0,
-	}, header)
-
 	local pager = create("Frame", {
 		Name = "Pages",
-		Size = UDim2.new(1, 0, 1, -38),
-		Position = UDim2.fromOffset(0, 38),
+		Size = UDim2.new(1, 0, 1, -34),
+		Position = UDim2.fromOffset(0, 34),
 		BackgroundTransparency = 1,
 	}, content)
 
@@ -11984,8 +12018,18 @@ local function initializeScript()
 		relayoutNavigation()
 	end
 
+	-- Opening one group folds the others: the rail then never needs more height
+	-- than one group's rows.
 	AngelHub.expandNavGroup = function(groupName)
+		for name, block in navRows do
+			if name ~= groupName and block.open then
+				block.open = false
+				tween(block.chevron, FAST_TWEEN, { Rotation = -90 })
+			end
+		end
+
 		setGroupOpen(groupName, true)
+		relayoutNavigation()
 	end
 
 	for _, group in NAV_GROUPS do
@@ -11998,23 +12042,23 @@ local function initializeScript()
 		}, navList)
 
 		local groupHeader = create("TextButton", {
-			Size = UDim2.new(1, 0, 0, 20),
+			Size = UDim2.new(1, 0, 0, NAV_HEADER_HEIGHT),
 			BackgroundTransparency = 1,
 			Text = "",
 			AutoButtonColor = false,
 		}, block)
 
 		local chevron = create("Frame", {
-			Size = UDim2.fromOffset(7, 7),
-			Position = UDim2.new(0, 7, 0.5, -3),
+			Size = UDim2.fromOffset(6, 6),
+			Position = UDim2.new(0, 6, 0.5, -3),
 			BackgroundTransparency = 1,
 		}, groupHeader)
 
 		for _, angle in { 45, -45 } do
 			create("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Size = UDim2.new(1, 0, 0, 1.4),
-				Position = UDim2.fromScale(0.5, angle == 45 and 0.3 or 0.7),
+				Size = UDim2.new(1, 0, 0, 1),
+				Position = UDim2.new(0.5, 0, angle == 45 and 0.3 or 0.7, 0),
 				Rotation = angle,
 				BackgroundColor3 = DIM_TEXT_COLOR,
 				BorderSizePixel = 0,
@@ -12022,12 +12066,12 @@ local function initializeScript()
 		end
 
 		local groupLabel = create("TextLabel", {
-			Size = UDim2.new(1, -30, 1, 0),
-			Position = UDim2.fromOffset(22, 0),
+			Size = UDim2.new(1, -24, 1, 0),
+			Position = UDim2.fromOffset(18, 0),
 			BackgroundTransparency = 1,
 			Text = string.upper(group.name),
 			TextColor3 = DIM_TEXT_COLOR,
-			TextSize = 10,
+			TextSize = 8.5,
 			Font = BOLD_FONT,
 			TextXAlignment = Enum.TextXAlignment.Left,
 		}, groupHeader)
@@ -12045,8 +12089,8 @@ local function initializeScript()
 
 		for _, tabName in group.tabs do
 			local button = create("TextButton", {
-				Size = UDim2.new(1, 0, 0, 24),
-				BackgroundColor3 = ELEMENT_COLOR,
+				Size = UDim2.new(1, 0, 0, NAV_ROW_HEIGHT),
+				BackgroundColor3 = PANEL_SOFT,
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
 				Text = "",
@@ -12057,8 +12101,8 @@ local function initializeScript()
 
 			local accent = create("Frame", {
 				Name = "Accent",
-				Size = UDim2.new(0, 3, 1, -12),
-				Position = UDim2.fromOffset(0, 6),
+				Size = UDim2.new(0, 2, 1, -10),
+				Position = UDim2.fromOffset(0, 5),
 				BackgroundColor3 = Color3.new(1, 1, 1),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -12069,19 +12113,19 @@ local function initializeScript()
 
 			local label = create("TextLabel", {
 				Name = "Label",
-				Size = UDim2.new(1, -26, 1, 0),
-				Position = UDim2.fromOffset(16, 0),
+				Size = UDim2.new(1, -22, 1, 0),
+				Position = UDim2.fromOffset(13, 0),
 				BackgroundTransparency = 1,
 				Text = tabName,
 				TextColor3 = DIM_TEXT_COLOR,
-				TextSize = 13,
+				TextSize = 10.5,
 				Font = TEXT_FONT,
 				TextXAlignment = Enum.TextXAlignment.Left,
 			}, button)
 
 			button.MouseEnter:Connect(function()
 				if AngelHub.selected ~= tabName then
-					tween(button, FAST_TWEEN, { BackgroundColor3 = ROW_COLOR, BackgroundTransparency = 0.45 })
+					tween(button, FAST_TWEEN, { BackgroundTransparency = 0.6 })
 					tween(label, FAST_TWEEN, { TextColor3 = OFF_TEXT_COLOR })
 				end
 			end)
@@ -12101,13 +12145,23 @@ local function initializeScript()
 			AngelHub.tabGroup[tabName] = group.name
 		end
 
+		local isActiveGroup = false
+		for _, tabName in group.tabs do
+			if tabName == DEFAULT_TAB then
+				isActiveGroup = true
+			end
+		end
+
 		local entry = {
 			frame = block,
 			container = container,
 			chevron = chevron,
-			open = true,
+			open = isActiveGroup,
 			rowsHeight = rowsHeight,
 		}
+
+		chevron.Rotation = isActiveGroup and 0 or -90
+		container.Visible = isActiveGroup
 
 		navRows[group.name] = entry
 		table.insert(navBlocks, entry)
@@ -12127,23 +12181,24 @@ local function initializeScript()
 
 	relayoutNavigation()
 
-	-- Footer card: who is running the hub.
+	-- Player card, pinned to the bottom of the rail.
 	local profile = create("Frame", {
 		Name = "Profile",
-		Size = UDim2.new(1, 0, 0, 38),
-		BackgroundColor3 = ELEMENT_COLOR,
-		BackgroundTransparency = 0.35,
+		AnchorPoint = Vector2.new(0, 1),
+		Size = UDim2.new(1, 0, 0, 34),
+		Position = UDim2.fromScale(0, 1),
+		BackgroundColor3 = PANEL_SOFT,
+		BackgroundTransparency = 0.2,
 		BorderSizePixel = 0,
-		LayoutOrder = 100,
 	}, rail)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 6) }, profile)
-	addStroke(profile, ACCENT_A, 0.9)
+	create("UICorner", { CornerRadius = UDim.new(0, 7) }, profile)
+	addStroke(profile, STROKE_COLOR, 0.5)
 
 	local avatar = create("ImageLabel", {
-		Size = UDim2.fromOffset(26, 26),
-		Position = UDim2.new(0, 6, 0.5, -13),
-		BackgroundColor3 = ROW_COLOR,
+		Size = UDim2.fromOffset(24, 24),
+		Position = UDim2.new(0, 5, 0.5, -12),
+		BackgroundColor3 = Color3.fromRGB(32, 32, 36),
 		BorderSizePixel = 0,
 		Image = "",
 	}, profile)
@@ -12151,33 +12206,34 @@ local function initializeScript()
 	create("UICorner", { CornerRadius = UDim.new(1, 0) }, avatar)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -48, 0, 14),
-		Position = UDim2.fromOffset(38, 5),
+		Size = UDim2.new(1, -38, 0, 12),
+		Position = UDim2.fromOffset(34, 5),
 		BackgroundTransparency = 1,
 		Text = localPlayer.DisplayName,
 		TextColor3 = TEXT_COLOR,
-		TextSize = 12,
+		TextSize = 10.5,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, profile)
 
 	create("Frame", {
-		Size = UDim2.fromOffset(5, 5),
-		Position = UDim2.fromOffset(38, 24),
+		Size = UDim2.fromOffset(4, 4),
+		Position = UDim2.fromOffset(34, 22),
 		BackgroundColor3 = Color3.fromRGB(120, 230, 150),
 		BorderSizePixel = 0,
 	}, profile)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -50, 0, 12),
-		Position = UDim2.fromOffset(47, 19),
+		Size = UDim2.new(1, -42, 0, 10),
+		Position = UDim2.fromOffset(41, 17),
 		BackgroundTransparency = 1,
-		Text = "Ready",
+		Text = "@" .. localPlayer.Name,
 		TextColor3 = DIM_TEXT_COLOR,
-		TextSize = 10,
+		TextSize = 9,
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, profile)
 
 	task.spawn(function()
