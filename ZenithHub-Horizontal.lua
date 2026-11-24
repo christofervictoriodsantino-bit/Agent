@@ -14,6 +14,9 @@ local MIN_WIDTH = 760
 local MIN_HEIGHT = 400
 local MAX_WIDTH = 1280
 local MAX_HEIGHT = 760
+-- Content is centred inside a max width so wide windows do not stretch rows.
+local CONTENT_MAX_WIDTH = 900
+local CONTENT_INSET = 12
 local CONFIG_FOLDER = "AngelHub"
 local CONFIG_FILE = "AngelHub/AngelHub.json"
 local TITLE_TEXT = "Zenith Hub | MM2"
@@ -30,6 +33,8 @@ local NAV_GROUPS = {
 local DEFAULT_TAB = "Gun"
 
 local ACCENT_A = Color3.fromRGB(225, 225, 225)
+-- Icons keep one monochrome tint, a step brighter than the dim labels.
+local ICON_COLOR = Color3.fromRGB(152, 152, 158)
 local ACCENT_B = Color3.fromRGB(110, 110, 116)
 local BACKGROUND_TOP = Color3.fromRGB(25, 25, 27)
 local BACKGROUND_BOTTOM = Color3.fromRGB(9, 9, 10)
@@ -135,6 +140,269 @@ end
 
 -- A column handle carries the scrolling frame plus the section box that is
 -- currently receiving cards, so callers address a column, not an Instance.
+-- Monochrome icon set, drawn from primitives so no image assets are needed.
+-- Each entry: shapes = { {kind, props}, ... }; kinds are box | circle | line.
+local ICONS = {
+	target = { shapes = { { "circle", { a = 0.5, b = 0.5, w = 10, h = 10 } }, { "circle", { a = 0.5, b = 0.5, w = 7.6, h = 7.6, inset = true } }, { "box", { a = 0.5, b = 0.5, w = 2.4, h = 2.4 } }, { "box", { a = 0.5, b = 0.06, w = 1.6, h = 3.4 } }, { "box", { a = 0.5, b = 0.94, w = 1.6, h = 3.4 } }, { "box", { a = 0.06, b = 0.5, w = 3.4, h = 1.6 } }, { "box", { a = 0.94, b = 0.5, w = 3.4, h = 1.6 } } } },
+	crosshair = { shapes = { { "box", { a = 0.5, b = 0.17, w = 1.2, h = 5 } }, { "box", { a = 0.5, b = 0.83, w = 1.2, h = 5 } }, { "box", { a = 0.17, b = 0.5, w = 5, h = 1.2 } }, { "box", { a = 0.83, b = 0.5, w = 5, h = 1.2 } }, { "box", { a = 0.5, b = 0.5, w = 1.6, h = 1.6 } } } },
+	bolt = { shapes = { { "box", { a = 0.58, b = 0.3, w = 3, h = 6, r = 2 } }, { "box", { a = 0.42, b = 0.58, w = 2.6, h = 6, r = 2 } }, { "box", { a = 0.5, b = 0.46, w = 3.4, h = 2.2 } }, { "box", { a = 0.5, b = 0.72, w = 2.4, h = 2 } } } },
+	pulse = { shapes = { { "box", { a = 0.14, b = 0.5, w = 1.6, h = 3.4, r = 1 } }, { "box", { a = 0.32, b = 0.5, w = 1.6, h = 7.4, r = 1 } }, { "box", { a = 0.5, b = 0.5, w = 1.6, h = 10.4, r = 1 } }, { "box", { a = 0.68, b = 0.5, w = 1.6, h = 6, r = 1 } }, { "box", { a = 0.86, b = 0.5, w = 1.6, h = 3.4, r = 1 } } } },
+	knife = { shapes = { { "box", { a = 0.5, b = 0.34, w = 2.2, h = 7.4, r = 3 } }, { "box", { a = 0.5, b = 0.72, w = 6.4, h = 1.6, r = 1 } }, { "box", { a = 0.5, b = 0.87, w = 2.2, h = 3.4, r = 1 } } } },
+	slidersIcon = { shapes = { { "box", { a = 0.5, b = 0.27, w = 10, h = 1.2 } }, { "box", { a = 0.32, b = 0.27, w = 3, h = 3 } }, { "box", { a = 0.5, b = 0.73, w = 10, h = 1.2 } }, { "box", { a = 0.69, b = 0.73, w = 3, h = 3 } } } },
+	shield = { shapes = { { "box", { a = 0.5, b = 0.5, w = 8.6, h = 9.6, r = 3 } }, { "box", { a = 0.5, b = 0.5, w = 3, h = 3, r = 1, inset = true } } } },
+	window = { shapes = { { "box", { a = 0.5, b = 0.5, w = 10.4, h = 8.6, r = 1 } }, { "box", { a = 0.5, b = 0.32, w = 9.4, h = 1.2, inset = true } }, { "box", { a = 0.5, b = 0.52, w = 1.2, h = 4.8, inset = true } } } },
+	flame = { shapes = { { "box", { a = 0.5, b = 0.62, w = 7, h = 7.6, r = 4 } }, { "box", { a = 0.5, b = 0.26, w = 3.4, h = 5.4, r = 2 } }, { "box", { a = 0.5, b = 0.72, w = 2.6, h = 3, r = 1.5, inset = true } } } },
+	sword = { shapes = { { "box", { a = 0.5, b = 0.16, w = 1.2, h = 3.4, r = 1 } }, { "box", { a = 0.5, b = 0.4, w = 2.2, h = 6.6, r = 1 } }, { "box", { a = 0.5, b = 0.62, w = 6.6, h = 1.4, r = 1 } }, { "box", { a = 0.5, b = 0.74, w = 1.6, h = 2.6 } }, { "circle", { a = 0.5, b = 0.9, w = 2.4, h = 2.4 } } } },
+	cash = { shapes = { { "box", { a = 0.5, b = 0.5, w = 10, h = 8, r = 2 } }, { "box", { a = 0.5, b = 0.5, w = 4, h = 4.6, r = 4, inset = true } } } },
+	box = { shapes = { { "box", { a = 0.5, b = 0.54, w = 9.6, h = 8.4, r = 1 } }, { "box", { a = 0.5, b = 0.3, w = 9.6, h = 1.4, inset = true } }, { "box", { a = 0.5, b = 0.52, w = 1.4, h = 4, inset = true } } } },
+	chat = { shapes = { { "box", { a = 0.5, b = 0.45, w = 10.6, h = 7.6, r = 2 } }, { "box", { a = 0.28, b = 0.45, w = 1.4, h = 1.4, inset = true } }, { "box", { a = 0.5, b = 0.45, w = 1.4, h = 1.4, inset = true } }, { "box", { a = 0.72, b = 0.45, w = 1.4, h = 1.4, inset = true } } } },
+	speed = { shapes = { { "box", { a = 0.24, b = 0.72, w = 2.6, h = 4.4, r = 1 } }, { "box", { a = 0.5, b = 0.62, w = 2.6, h = 7, r = 1 } }, { "box", { a = 0.76, b = 0.52, w = 2.6, h = 9.6, r = 1 } } } },
+	person = { shapes = { { "circle", { a = 0.5, b = 0.3, w = 5.2, h = 5.2 } }, { "box", { a = 0.5, b = 0.76, w = 8.4, h = 5.2, r = 4 } } } },
+	bulb = { shapes = { { "circle", { a = 0.5, b = 0.4, w = 7.6, h = 7.6 } }, { "box", { a = 0.5, b = 0.4, w = 3, h = 3, inset = true } }, { "box", { a = 0.5, b = 0.78, w = 4, h = 1.4 } }, { "box", { a = 0.5, b = 0.9, w = 4.6, h = 1.4 } } } },
+	gear = { shapes = { { "circle", { a = 0.5, b = 0.5, w = 8.6, h = 8.6 } }, { "circle", { a = 0.5, b = 0.5, w = 3, h = 3, inset = true } }, { "box", { a = 0.5, b = 0.06, w = 2.4, h = 2.6 } }, { "box", { a = 0.5, b = 0.94, w = 2.4, h = 2.6 } }, { "box", { a = 0.06, b = 0.5, w = 2.6, h = 2.4 } }, { "box", { a = 0.94, b = 0.5, w = 2.6, h = 2.4 } } } },
+	gear2 = { shapes = { { "box", { a = 0.5, b = 0.5, w = 8.6, h = 8.6, r = 3 } }, { "box", { a = 0.5, b = 0.5, w = 3, h = 3, r = 1, inset = true } } } },
+	dumbbell = { shapes = { { "box", { a = 0.5, b = 0.5, w = 9, h = 1.6 } }, { "box", { a = 0.13, b = 0.5, w = 2.4, h = 5.4, r = 1 } }, { "box", { a = 0.87, b = 0.5, w = 2.4, h = 5.4, r = 1 } } } },
+	house = { shapes = { { "box", { a = 0.5, b = 0.66, w = 8.4, h = 5.6 } }, { "box", { a = 0.5, b = 0.36, w = 9.6, h = 1.8, r = 1 } }, { "box", { a = 0.5, b = 0.26, w = 6.6, h = 1.8, r = 1 } }, { "box", { a = 0.5, b = 0.16, w = 3.6, h = 1.8, r = 1 } }, { "box", { a = 0.5, b = 0.76, w = 2.6, h = 3.2, inset = true } } } },
+	spark = { shapes = { { "box", { a = 0.5, b = 0.5, w = 1.8, h = 10, r = 1 } }, { "box", { a = 0.5, b = 0.5, w = 10, h = 1.8, r = 1 } }, { "box", { a = 0.18, b = 0.18, w = 1.4, h = 1.4 } }, { "box", { a = 0.82, b = 0.18, w = 1.4, h = 1.4 } }, { "box", { a = 0.18, b = 0.82, w = 1.4, h = 1.4 } }, { "box", { a = 0.82, b = 0.82, w = 1.4, h = 1.4 } } } },
+	trophy = { shapes = { { "box", { a = 0.5, b = 0.26, w = 7.4, h = 4.6, r = 2 } }, { "box", { a = 0.5, b = 0.44, w = 4.6, h = 3, r = 1 } }, { "box", { a = 0.15, b = 0.24, w = 2.2, h = 2.6, r = 1 } }, { "box", { a = 0.85, b = 0.24, w = 2.2, h = 2.6, r = 1 } }, { "box", { a = 0.5, b = 0.62, w = 1.8, h = 3.4 } }, { "box", { a = 0.5, b = 0.82, w = 5.6, h = 2, r = 1 } } } },
+	wind = { shapes = { { "box", { a = 0.44, b = 0.3, w = 8, h = 1.8, r = 1 } }, { "box", { a = 0.56, b = 0.5, w = 9, h = 1.8, r = 1 } }, { "box", { a = 0.4, b = 0.7, w = 6.6, h = 1.8, r = 1 } } } },
+	power = { shapes = { { "box", { a = 0.5, b = 0.28, w = 2.4, h = 4.6, r = 1 } }, { "box", { a = 0.5, b = 0.62, w = 1.4, h = 3.4, inset = true } }, { "box", { a = 0.5, b = 0.62, w = 8.6, h = 1.8, r = 1 } }, { "box", { a = 0.14, b = 0.62, w = 1.8, h = 5 } }, { "box", { a = 0.86, b = 0.62, w = 1.8, h = 5 } } } },
+	chip = { shapes = { { "box", { a = 0.5, b = 0.5, w = 7, h = 7, r = 1 } }, { "box", { a = 0.5, b = 0.5, w = 3, h = 3, inset = true } }, { "box", { a = 0.5, b = 0.06, w = 1.4, h = 2.4 } }, { "box", { a = 0.5, b = 0.94, w = 1.4, h = 2.4 } }, { "box", { a = 0.06, b = 0.5, w = 2.4, h = 1.4 } }, { "box", { a = 0.94, b = 0.5, w = 2.4, h = 1.4 } } } },
+	arrowDown = { shapes = { { "box", { a = 0.5, b = 0.62, w = 1.8, h = 7, r = 1 } }, { "box", { a = 0.5, b = 0.14, w = 7.6, h = 2 } }, { "box", { a = 0.5, b = 0.3, w = 4.6, h = 2 } }, { "box", { a = 0.5, b = 0.46, w = 1.6, h = 2 } } } },
+	arrowUp = { shapes = { { "box", { a = 0.5, b = 0.62, w = 1.8, h = 7, r = 1 } }, { "box", { a = 0.5, b = 0.86, w = 7.6, h = 2 } }, { "box", { a = 0.5, b = 0.7, w = 4.6, h = 2 } }, { "box", { a = 0.5, b = 0.54, w = 1.6, h = 2 } } } },
+	link = { shapes = { { "circle", { a = 0.33, b = 0.5, w = 7.4, h = 7.4 } }, { "circle", { a = 0.33, b = 0.5, w = 3.4, h = 3.4, inset = true } }, { "circle", { a = 0.67, b = 0.5, w = 7.4, h = 7.4 } }, { "circle", { a = 0.67, b = 0.5, w = 3.4, h = 3.4, inset = true } } } },
+	ring = { shapes = { { "circle", { a = 0.5, b = 0.5, w = 9, h = 9 } }, { "circle", { a = 0.5, b = 0.5, w = 5.6, h = 5.6, inset = true } } } },
+	grid = { shapes = { { "box", { a = 0.29, b = 0.29, w = 4, h = 4, r = 1 } }, { "box", { a = 0.71, b = 0.29, w = 4, h = 4, r = 1 } }, { "box", { a = 0.29, b = 0.71, w = 4, h = 4, r = 1 } }, { "box", { a = 0.71, b = 0.71, w = 4, h = 4, r = 1 } } } },
+	tag = { shapes = { { "box", { a = 0.5, b = 0.52, w = 8.6, h = 5.6, r = 2 } }, { "circle", { a = 0.7, b = 0.52, w = 2, h = 2, inset = true } } } },
+}
+-- Per-row icons; a section header falls back to the first row it owns.
+local MODULE_ICONS = {
+	["Gun Aimbot"] = "target", ["Auto Shoot"] = "crosshair", ["Gun Aura"] = "pulse",
+	["Aim Method"] = "slidersIcon", ["Aimbot Target"] = "person", ["Target Player"] = "person",
+	["Aimbot Keybind"] = "tag", ["WallCheck"] = "window", ["Macro"] = "bolt",
+	["Shoot Mode"] = "slidersIcon", ["Shoot WallCheck"] = "window", ["Shoot Proximity"] = "ring",
+	["Shoot Proximity Aura"] = "ring", ["Gun Aura Studs"] = "slidersIcon", ["Gun Aura Show Hitbox"] = "box",
+	["Knife Aura"] = "knife", ["Knife Aura Range"] = "slidersIcon", ["Knife Hold Mouse"] = "target",
+	["Kill All"] = "sword", ["Kill Player"] = "person", ["Kill Selected"] = "sword",
+	["Knife Throw"] = "knife", ["Throw WallCheck"] = "window", ["Auto Knife Throw"] = "pulse",
+	["Throw Delay"] = "slidersIcon", ["Knife Tracer"] = "link",
+	["Fling Murderer"] = "flame", ["Fling Sheriff"] = "flame", ["Fling All Innocents"] = "flame",
+	["Fling Target"] = "person", ["Fling"] = "flame", ["Auto Fling Selected Target"] = "pulse",
+	["Fling Retries"] = "slidersIcon", ["Anti Fling"] = "shield", ["Player Shield"] = "shield",
+	["Impact Shield"] = "shield",
+	["Coins Collected"] = "cash", ["Farm Time"] = "tag", ["Auto Farm"] = "cash",
+	["Farm Speed"] = "speed", ["Stay Under When Round Starts"] = "arrowUp",
+	["Farm Safe Zone"] = "shield", ["Reset When Full Coin Bag"] = "ring",
+	["Fling Murder After Full Bag"] = "flame", ["Fling Sheriff After Full Bag"] = "flame",
+	["Auto Grab Gun And Shoot"] = "target", ["Auto Kill All When Full Bag"] = "sword",
+	["Sheriff Wins"] = "trophy", ["Murder Wins"] = "trophy", ["Innocent Wins"] = "trophy", ["Win Time"] = "tag",
+	["Auto Win"] = "trophy", ["Insta Kill As Murder"] = "sword", ["Insta Kill As Sheriff"] = "sword",
+	["Fling Sheriff And Get Gun"] = "flame", ["Fling Murder If Dead"] = "flame",
+	["Auto Vote"] = "tag", ["Select Map"] = "grid", ["Auto Unbox"] = "box", ["Box To Open"] = "box",
+	["Pay With"] = "cash", ["Reveal Animation"] = "bulb", ["Unbox Delay"] = "slidersIcon",
+	["Max Boxes Per Run"] = "slidersIcon", ["Report Boxes And Coin"] = "chat",
+	["Blurt Roles"] = "chat", ["Coins Aura"] = "cash", ["Select Emote"] = "person",
+	["Play Emote"] = "person", ["Get All Emotes"] = "person", ["Disguise"] = "person", ["UserID"] = "tag",
+	["Enable Fly"] = "arrowUp", ["Fly Method"] = "slidersIcon", ["Fly Float"] = "arrowUp",
+	["Fly Horizontal Speed"] = "speed", ["Fly Vertical Speed"] = "speed",
+	["Fly Response Multiplier"] = "slidersIcon", ["Fly Burst Interval"] = "slidersIcon",
+	["Fly Wall Check"] = "window", ["Fly Face Camera"] = "target", ["Fly Up Key"] = "tag",
+	["Fly Down Key"] = "arrowDown",
+	["Enable Speed"] = "speed", ["Speed Mode"] = "slidersIcon", ["Speed Value"] = "speed",
+	["Speed Response"] = "slidersIcon", ["Speed Braking"] = "slidersIcon",
+	["Speed Keep Vertical"] = "arrowUp", ["Speed Wall Check"] = "window",
+	["Speed Burst Delay"] = "slidersIcon", ["Speed Auto Jump"] = "wind", ["Sprint Key"] = "tag",
+	["Custom Jump Power"] = "arrowUp", ["Jump Power"] = "slidersIcon", ["High Jump"] = "arrowUp",
+	["High Jump Velocity"] = "slidersIcon", ["Jump Auto Jump"] = "wind", ["Long Jump"] = "wind",
+	["Long Jump Mode"] = "slidersIcon", ["Long Jump Speed"] = "speed",
+	["Infinite Jump"] = "arrowUp", ["Infinite Jump Mode"] = "slidersIcon",
+	["Infinite Jump Power"] = "slidersIcon", ["Infinite Jump Interval"] = "slidersIcon",
+	["Enable Gravity"] = "dumbbell", ["Gravity Method"] = "slidersIcon", ["Gravity Value"] = "arrowDown",
+	["Reset Gravity"] = "ring",
+	["Teleport To Map"] = "grid", ["Teleport To Lobby"] = "house", ["Teleport Player Name"] = "person",
+	["Teleport To Player"] = "person", ["Get Gun"] = "target", ["Get Gun Key"] = "tag",
+	["Auto Get Gun"] = "target", ["Auto Pickup Gun Key"] = "tag", ["Noclip"] = "window",
+	["Air Swim"] = "arrowUp", ["Air Walk"] = "wind", ["Walk Fling"] = "flame",
+	["Player ESP"] = "person", ["ESP Boxes"] = "grid", ["Box Thickness"] = "slidersIcon",
+	["Filled Box"] = "box", ["Skeleton"] = "person", ["Tracers"] = "link",
+	["ESP Visibility Check"] = "window", ["Chams"] = "flame",
+	["Chams Fill Transparency"] = "slidersIcon", ["Chams Outline Transparency"] = "slidersIcon",
+	["Chams Through Walls"] = "window", ["Chams Show Perk"] = "trophy",
+	["Nametags"] = "tag", ["Display Name"] = "tag", ["Account Name"] = "tag",
+	["Nametag Distance"] = "slidersIcon", ["Show Role"] = "trophy", ["Nametag Text Size"] = "slidersIcon",
+	["Nametag Through Walls"] = "window",
+	["HP Players"] = "pulse", ["HP Health Text"] = "pulse", ["HP Through Walls"] = "window",
+	["Self HP"] = "pulse", ["Self HP Position"] = "slidersIcon", ["Self HP Scale"] = "slidersIcon",
+	["Role Colours"] = "bulb", ["Murderer Colour"] = "flame", ["Sheriff Colour"] = "shield",
+	["Hero Colour"] = "trophy", ["Innocent Colour"] = "person", ["Dead Colour"] = "ring",
+	["Murderer ESP"] = "flame", ["Sheriff ESP"] = "shield", ["Hero ESP"] = "trophy",
+	["Innocent ESP"] = "person", ["Dead ESP"] = "ring",
+	["Coin ESP"] = "cash", ["Coin In Use"] = "cash", ["Coin Colour"] = "bulb",
+	["Coin Transparency"] = "slidersIcon", ["Remove Textures"] = "grid",
+	["Disable Particles"] = "spark", ["Disable Shadows"] = "bulb", ["Simple Materials"] = "grid",
+	["Lowest Render Quality"] = "speed", ["Low Detail Meshes"] = "grid",
+	["Hide Distant Scenery"] = "window", ["Simplify Terrain"] = "grid",
+	["Disable Post Effects"] = "bulb", ["Simple Lighting"] = "bulb", ["Disable Local Lights"] = "bulb",
+	["Simplify Game UI"] = "grid", ["Hide World UI"] = "window", ["Hide Game UI"] = "window",
+	["Hide Roblox Panels"] = "window",
+	["Gun ESP"] = "target", ["Trap ESP"] = "box", ["Item Show Distance"] = "slidersIcon",
+	["Item Outline"] = "box", ["Item Text Size"] = "slidersIcon",
+	["X-Ray"] = "window", ["XRay Transparency"] = "slidersIcon",
+	["Fullbright"] = "bulb", ["Fullbright Brightness"] = "slidersIcon", ["Time Changer"] = "tag",
+	["Time Value"] = "slidersIcon", ["Fast Time"] = "speed",
+	["Custom FOV"] = "target", ["FOV Value"] = "slidersIcon", ["Custom Zoom"] = "target",
+	["Zoom Max Distance"] = "slidersIcon", ["Zoom Min Distance"] = "slidersIcon",
+	["Unlock Forced First Person"] = "person", ["Zoom Through Walls"] = "window",
+	["FreeCam"] = "target", ["FreeCam Speed"] = "speed", ["FreeCam Sensitivity"] = "slidersIcon",
+	["Menu Keybind"] = "gear", ["Config Name"] = "tag", ["Create"] = "gear2", ["Load"] = "box",
+	["Save"] = "gear2", ["Autoload"] = "pulse", ["Anti AFK"] = "shield", ["Rejoin Server"] = "link",
+	["Reset Settings"] = "ring", ["Unload"] = "power",
+}
+
+-- Section headers: a generic icon for the group, overridden where a module is
+-- the whole point of the section.
+local SECTION_ICONS = {
+	["Gun Aimbot"] = "target", ["Auto Shoot"] = "crosshair", ["Gun Aura"] = "pulse",
+	["Knife Stab"] = "knife", ["Knife Throw"] = "knife", ["Fling"] = "flame",
+	["Anti Fling"] = "shield", ["Auto Farm"] = "cash", ["Auto Win"] = "trophy",
+	["Auto Vote"] = "tag", ["Auto Unbox"] = "box", ["Blurt Roles"] = "chat",
+	["Coins Aura"] = "cash", ["Emotes"] = "person", ["Disguise"] = "person",
+	["Fly"] = "arrowUp", ["Speed Settings"] = "speed", ["MM2 Sprint Tail"] = "wind",
+	["Jump Settings"] = "arrowUp", ["Infinite Jump"] = "arrowUp", ["Gravity"] = "dumbbell",
+	["MM2 Teleport"] = "person", ["Movement Toggles"] = "wind",
+	["Player ESP"] = "person", ["Chams"] = "flame", ["Nametags"] = "tag", ["HP"] = "pulse",
+	["Role Colours"] = "bulb", ["Coin ESP"] = "cash", ["Improve FPS"] = "speed",
+	["Item ESP"] = "box", ["X-Ray"] = "window", ["Fullbright"] = "bulb", ["FOV"] = "target",
+	["Zoom"] = "target", ["FreeCam"] = "target", ["Menu"] = "gear", ["Configs"] = "box",
+	["Utility"] = "shield", ["Unload"] = "power",
+}
+
+-- The best modules first inside every section: this order is used only for
+-- layout, the sections themselves keep their names and settings.
+local MODULE_PRIORITY = {
+	"Gun Aimbot", "Auto Shoot", "Knife Aura", "Auto Knife Throw", "Auto Win", "Auto Farm",
+	"Player ESP", "Chams", "Auto Unbox", "Anti Fling", "Enable Fly", "Enable Speed",
+	"Nametags", "Auto Vote", "Self HP", "Gun ESP",
+}
+local MODULE_PENALTY = {
+	"Farm Time", "Coins Collected", "Sheriff Wins", "Murder Wins", "Innocent Wins", "Win Time",
+	"Fling Retries", "ESP Visibility Check", "Chams Show Perk", "Knife Tracer",
+	"Report Boxes And Coin", "Stay Under When Round Starts", "Fly Burst Interval",
+	"Speed Burst Delay", "Infinite Jump Interval", "Coin Transparency",
+}
+
+local function iconKindOf(source, text, isSection)
+	if isSection and SECTION_ICONS[text] then
+		return SECTION_ICONS[text]
+	end
+
+	return MODULE_ICONS[text] or (isSection and "grid" or "ring")
+end
+
+local function drawIconShapes(holder, shapeName, size, tint, cutout, transparency, thickness)
+	local spec = ICONS[shapeName] or ICONS.grid
+	local scale = size / 14
+
+	for _, entry in spec.shapes do
+		local kind, shapeProps = entry[1], entry[2]
+		local filled = not shapeProps.inset
+		local piece = create("Frame", {
+			Name = filled and "Fill" or "Cutout",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(shapeProps.a, shapeProps.b),
+			Size = UDim2.fromOffset(shapeProps.w * scale, shapeProps.h * scale),
+			BackgroundColor3 = filled and tint or cutout,
+			BackgroundTransparency = transparency or 0,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+		}, holder)
+
+		if kind == "circle" then
+			create("UICorner", { CornerRadius = UDim.new(1, 0) }, piece)
+		elseif (shapeProps.r or 0) > 0 then
+			create("UICorner", { CornerRadius = UDim.new(0, shapeProps.r * scale) }, piece)
+		end
+	end
+end
+
+-- Icons are built from small solid shapes; inset shapes are painted in the
+-- parent colour so they read as cut-outs instead of extra blocks.
+local function addIcon(parent, props, color)
+	local size = props.size or 14
+	local holder = create("Frame", {
+		Name = props.name or "Icon",
+		Size = UDim2.fromOffset(size, size),
+		Position = UDim2.fromOffset(props.x or 0, props.y or 0),
+		AnchorPoint = props.anchor or Vector2.new(0, 0.5),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 3,
+	}, parent)
+
+	drawIconShapes(
+		holder,
+		props.shape or "box",
+		size,
+		props.color or color or ICON_COLOR,
+		props.cutout or PANEL_COLOR,
+		props.transparency,
+		props.thickness
+	)
+
+	return holder
+end
+
+-- Swap the glyph of an existing icon without rebuilding the holder.
+local function setIcon(holder, shapeName, size, tint, cutout)
+	for _, child in holder:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+
+	holder.Size = UDim2.fromOffset(size, size)
+	drawIconShapes(holder, shapeName, size, tint, cutout or PANEL_COLOR)
+end
+
+-- Best modules first: the layout only; section membership and settings are
+-- untouched. Rows not listed keep their written order after the promoted ones,
+-- and diagnostics (counters, retry counters) sink to the bottom.
+local function rowPriority(source)
+	local promoted = table.find(MODULE_PRIORITY, source)
+	if promoted then
+		return promoted
+	end
+
+	if table.find(MODULE_PENALTY, source) then
+		return 500
+	end
+
+	return 100
+end
+
+local function sortRowsByPriority(box)
+	local rows = {}
+
+	for _, child in box:GetChildren() do
+		if child:IsA("GuiObject") and child:GetAttribute("Prioritised") then
+			table.insert(rows, child)
+		end
+	end
+
+	table.sort(rows, function(a, b)
+		local left, right = a:GetAttribute("Priority"), b:GetAttribute("Priority")
+		if left == right then
+			return a.LayoutOrder < b.LayoutOrder
+		end
+
+		return left < right
+	end)
+
+	for index, row in rows do
+		row.LayoutOrder = 1000 + index
+	end
+end
+
 local function resolveParent(parent)
 	if type(parent) == "table" then
 		return parent.frame
@@ -156,13 +424,28 @@ local function createCard(className, parent, text, height)
 		Name = text,
 		Size = UDim2.new(1, 0, 0, height),
 		BackgroundColor3 = ROW_COLOR_FILL,
-		BackgroundTransparency = 0.25,
+		BackgroundTransparency = 0.28,
 		BorderSizePixel = 0,
+		ZIndex = 2,
 	}, boxOf(parent) or resolveParent(parent))
 
 	create("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
 	local stroke = addStroke(card, STROKE_COLOR, 1)
+	stroke.ZIndex = 2
 	card.ClipsDescendants = true
+
+	create("Frame", {
+		Name = "IconChip",
+		Size = UDim2.fromOffset(18, 18),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 5, 0.5, 0),
+		BackgroundColor3 = PANEL_COLOR,
+		BackgroundTransparency = 0,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+	}, card)
+
+	create("UICorner", { CornerRadius = UDim.new(0, 5) }, card.IconChip)
 
 	local group = AngelHub.currentGroup
 	if group then
@@ -172,12 +455,12 @@ local function createCard(className, parent, text, height)
 	end
 
 	card.MouseEnter:Connect(function()
-		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.05 })
+		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.06 })
 		tween(stroke, FAST_TWEEN, { Transparency = 0.7 })
 	end)
 
 	card.MouseLeave:Connect(function()
-		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.25 })
+		tween(card, FAST_TWEEN, { BackgroundTransparency = 0.28 })
 		tween(stroke, FAST_TWEEN, { Transparency = 1 })
 	end)
 
@@ -190,40 +473,57 @@ local function addSection(parent, text)
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = PANEL_COLOR,
-		BackgroundTransparency = 0.08,
+		BackgroundTransparency = 0.06,
 		BorderSizePixel = 0,
 		LayoutOrder = #AngelHub.boxes + 1,
 	}, resolveParent(parent))
 
 	create("UICorner", { CornerRadius = UDim.new(0, 9) }, box)
-	addStroke(box, STROKE_COLOR, 0.45)
+	addStroke(box, STROKE_COLOR, 0.4)
 	create("UIPadding", {
-		PaddingTop = UDim.new(0, 3),
+		PaddingTop = UDim.new(0, 4),
 		PaddingBottom = UDim.new(0, 5),
 		PaddingLeft = UDim.new(0, 4),
 		PaddingRight = UDim.new(0, 4),
 	}, box)
 	create("UIListLayout", { Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder }, box)
 
-	local holder = create("Frame", { Name = text, Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1 }, box)
-	local marker = create("Frame", {
-		Size = UDim2.fromOffset(10, 10),
-		Position = UDim2.new(0, 5, 0.5, -5),
-		BackgroundColor3 = Color3.new(1, 1, 1),
+	local holder = create("Frame", { Name = text, Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1 }, box)
+
+	-- Header icon sits in a recessed chip so section titles read like the rows.
+	local chip = create("Frame", {
+		Size = UDim2.fromOffset(16, 16),
+		Position = UDim2.new(0, 5, 0.5, -8),
+		BackgroundColor3 = Color3.fromRGB(26, 26, 31),
 		BorderSizePixel = 0,
+		ZIndex = 2,
 	}, holder)
 
-	create("UICorner", { CornerRadius = UDim.new(0, 3) }, marker)
-	addGradient(marker, 45)
+	create("UICorner", { CornerRadius = UDim.new(0, 4) }, chip)
+	addStroke(chip, STROKE_COLOR, 0.6).ZIndex = 2
+
+	addIcon(chip, { shape = iconKindOf(nil, text, true), size = 9, x = 3.5, y = 3.5, anchor = Vector2.new(0, 0), color = ACCENT_A }, ACCENT_A)
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -26, 1, 0),
-		Position = UDim2.fromOffset(20, 0),
+		Size = UDim2.new(1, -46, 0, 11),
+		Position = UDim2.fromOffset(27, 1),
 		BackgroundTransparency = 1,
 		Text = string.upper(text),
 		TextColor3 = ACCENT_A,
 		TextSize = 9,
 		Font = BOLD_FONT,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, holder)
+
+	create("TextLabel", {
+		Name = "Subtitle",
+		Size = UDim2.new(1, -46, 0, 10),
+		Position = UDim2.fromOffset(27, 11),
+		BackgroundTransparency = 1,
+		Text = text == string.upper(text) and "" or text,
+		TextColor3 = DIM_TEXT_COLOR,
+		TextSize = 8,
+		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, holder)
 
@@ -243,20 +543,33 @@ local pendingButtons = {}
 
 local function addToggle(parent, text, keybind, default)
 	local startState = default == true
-	local holder, stroke = createCard("TextButton", parent, text, 24)
+	local holder, stroke = createCard("TextButton", parent, text, 26)
 	holder.Text = ""
 	holder.AutoButtonColor = false
+
+	local glyph = addIcon(holder, {
+		shape = iconKindOf(nil, text, false),
+		size = 12,
+		x = 8,
+		y = 13,
+		color = startState and ACCENT_A or ICON_COLOR,
+	})
+
+	holder:SetAttribute("IconName", text)
+	holder.Icon = glyph
 
 	local track = create("Frame", {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Size = UDim2.fromOffset(26, 13),
-		Position = UDim2.new(1, -4, 0.5, 0),
+		Position = UDim2.new(1, -6, 0.5, 0),
 		BackgroundColor3 = startState and SWITCH_ON or SWITCH_OFF,
 		BorderSizePixel = 0,
+		ZIndex = 2,
 	}, holder)
 
 	create("UICorner", { CornerRadius = UDim.new(1, 0) }, track)
 	local trackStroke = addStroke(track, STROKE_COLOR, startState and 1 or 0.5)
+	trackStroke.ZIndex = 2
 
 	local knob = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -264,13 +577,14 @@ local function addToggle(parent, text, keybind, default)
 		Position = UDim2.new(startState and 1 or 0, startState and -6 or 6, 0.5, 0),
 		BackgroundColor3 = startState and Color3.fromRGB(18, 18, 20) or OFF_TEXT_COLOR,
 		BorderSizePixel = 0,
+		ZIndex = 3,
 	}, track)
 
 	create("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
 
 	local label = create("TextLabel", {
-		Size = UDim2.new(1, keybind and -96 or -44, 1, 0),
-		Position = UDim2.fromOffset(7, 0),
+		Size = UDim2.new(1, keybind and -108 or -56, 1, 0),
+		Position = UDim2.fromOffset(24, 0),
 		BackgroundTransparency = 1,
 		Text = pendingControls[text] and (text .. " (pendiente)") or (text == "Auto Get Gun" and "Auto Pickup Gun" or text),
 		TextColor3 = startState and TEXT_COLOR or OFF_TEXT_COLOR,
@@ -278,6 +592,7 @@ local function addToggle(parent, text, keybind, default)
 		Font = TEXT_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
+		ZIndex = 2,
 	}, holder)
 
 	local state = startState
@@ -295,6 +610,12 @@ local function addToggle(parent, text, keybind, default)
 			BackgroundColor3 = state and Color3.fromRGB(18, 18, 20) or OFF_TEXT_COLOR,
 		})
 		tween(label, FAST_TWEEN, { TextColor3 = state and TEXT_COLOR or OFF_TEXT_COLOR })
+
+		for _, shape in glyph:GetChildren() do
+			if shape.Name == "Fill" then
+				tween(shape, FAST_TWEEN, { BackgroundColor3 = state and ACCENT_A or ICON_COLOR })
+			end
+		end
 	end
 
 	if keybind then
@@ -302,7 +623,7 @@ local function addToggle(parent, text, keybind, default)
 		local keybindButton = create("TextButton", {
 			AnchorPoint = Vector2.new(1, 0.5),
 			Size = UDim2.fromOffset(46, 16),
-			Position = UDim2.new(1, -36, 0.5, 0),
+			Position = UDim2.new(1, -40, 0.5, 0),
 			BackgroundTransparency = 1,
 			Text = "[" .. keybind .. "]",
 			TextColor3 = DIM_TEXT_COLOR,
@@ -310,6 +631,7 @@ local function addToggle(parent, text, keybind, default)
 			Font = TEXT_FONT,
 			TextXAlignment = Enum.TextXAlignment.Right,
 			AutoButtonColor = false,
+			ZIndex = 2,
 		}, holder)
 
 		local function applyKey(keyName)
@@ -372,13 +694,16 @@ local function addToggle(parent, text, keybind, default)
 	end)
 
 	holder.MouseButton1Up:Connect(function()
-		tween(holder, FAST_TWEEN, { BackgroundTransparency = 0.05 })
+		tween(holder, FAST_TWEEN, { BackgroundTransparency = 0.06 })
 	end)
 
 	holder.Activated:Connect(function()
 		AngelHub.setters[text](not state)
 	end)
 
+	holder:SetAttribute("Prioritised", true)
+	holder:SetAttribute("Priority", rowPriority(text))
+	holder.LayoutOrder = 1000 + #AngelHub.searchables
 	table.insert(AngelHub.searchables, holder)
 	return holder
 end
@@ -392,9 +717,11 @@ local function addSlider(parent, text, minValue, maxValue, default, decimals)
 	local holder = createCard("Frame", parent, text, 34)
 	local startAlpha = (default - minValue) / (maxValue - minValue)
 
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 12, x = 8, y = 9, color = ICON_COLOR })
+
 	create("TextLabel", {
-		Size = UDim2.new(1, -54, 0, 14),
-		Position = UDim2.fromOffset(7, 2),
+		Size = UDim2.new(1, -71, 0, 14),
+		Position = UDim2.fromOffset(24, 2),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
@@ -511,9 +838,11 @@ end
 local function addCycle(parent, text, options, onChange)
 	local holder = createCard("Frame", parent, text, 24)
 
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 12, x = 8, y = 12, color = ICON_COLOR })
+
 	create("TextLabel", {
-		Size = UDim2.new(1, -104, 1, 0),
-		Position = UDim2.fromOffset(7, 0),
+		Size = UDim2.new(1, -121, 1, 0),
+		Position = UDim2.fromOffset(24, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
@@ -632,24 +961,39 @@ local function addButton(parent, text, callback)
 		Position = UDim2.fromOffset(4, 2),
 		BackgroundColor3 = PANEL_SOFT,
 		BorderSizePixel = 0,
-		Text = pendingButtons[text] and (text .. " (pendiente)") or (text == "Get All Emotes" and "Get All Emotes (local)" or text),
+		Text = "",
 		TextColor3 = OFF_TEXT_COLOR,
 		TextSize = 11,
 		Font = TEXT_FONT,
 		AutoButtonColor = false,
 	}, holder)
 
+	addIcon(button, { shape = iconKindOf(nil, text, false), size = 11, x = 11, y = 10, color = ICON_COLOR })
+
+	local buttonLabel = create("TextLabel", {
+		Size = UDim2.new(1, -40, 1, 0),
+		Position = UDim2.fromOffset(22, 0),
+		BackgroundTransparency = 1,
+		Text = pendingButtons[text] and (text .. " (pendiente)") or (text == "Get All Emotes" and "Get All Emotes (local)" or text),
+		TextColor3 = OFF_TEXT_COLOR,
+		TextSize = 11,
+		Font = TEXT_FONT,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		ZIndex = 2,
+	}, button)
+
 	create("UICorner", { CornerRadius = UDim.new(0, 6) }, button)
 	local buttonStroke = addStroke(button, STROKE_COLOR, 0.3)
 
 	button.MouseEnter:Connect(function()
 		tween(buttonStroke, FAST_TWEEN, { Color = ACCENT_A, Transparency = 0 })
-		tween(button, FAST_TWEEN, { TextColor3 = TEXT_COLOR })
+		tween(buttonLabel, FAST_TWEEN, { TextColor3 = TEXT_COLOR })
 	end)
 
 	button.MouseLeave:Connect(function()
 		tween(buttonStroke, FAST_TWEEN, { Color = STROKE_COLOR, Transparency = 0.3 })
-		tween(button, FAST_TWEEN, { TextColor3 = OFF_TEXT_COLOR })
+		tween(buttonLabel, FAST_TWEEN, { TextColor3 = OFF_TEXT_COLOR })
 	end)
 
 	button.MouseButton1Down:Connect(function()
@@ -674,9 +1018,11 @@ end
 local function addText(parent, text, placeholder, default)
 	local holder = createCard("Frame", parent, text, 24)
 
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 12, x = 8, y = 12, color = ICON_COLOR })
+
 	create("TextLabel", {
 		Size = UDim2.new(0.44, -8, 1, 0),
-		Position = UDim2.fromOffset(7, 0),
+		Position = UDim2.fromOffset(24, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
@@ -731,9 +1077,11 @@ end
 local function addKeybind(parent, text, default)
 	local holder = createCard("Frame", parent, text, 24)
 
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 12, x = 8, y = 12, color = ICON_COLOR })
+
 	create("TextLabel", {
-		Size = UDim2.new(1, -76, 1, 0),
-		Position = UDim2.fromOffset(7, 0),
+		Size = UDim2.new(1, -93, 1, 0),
+		Position = UDim2.fromOffset(24, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
@@ -798,9 +1146,11 @@ end
 local function addColor(parent, text, default)
 	local holder = createCard("Frame", parent, text, 24)
 
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 12, x = 8, y = 12, color = ICON_COLOR })
+
 	create("TextLabel", {
-		Size = UDim2.new(1, -40, 1, 0),
-		Position = UDim2.fromOffset(7, 0),
+		Size = UDim2.new(1, -57, 1, 0),
+		Position = UDim2.fromOffset(24, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
@@ -845,9 +1195,11 @@ local function addList(parent, text, items, height)
 	height = height or 90
 	local holder = createCard("Frame", parent, text, height + 20)
 
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 11, x = 8, y = 8, color = ICON_COLOR })
+
 	create("TextLabel", {
-		Size = UDim2.new(1, -14, 0, 14),
-		Position = UDim2.fromOffset(7, 1),
+		Size = UDim2.new(1, -31, 0, 14),
+		Position = UDim2.fromOffset(24, 1),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = TEXT_COLOR,
@@ -924,9 +1276,11 @@ end
 local function addCounter(parent, text, default)
 	local holder = createCard("Frame", parent, text, 22)
 
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 11, x = 8, y = 11, color = ICON_COLOR })
+
 	create("TextLabel", {
-		Size = UDim2.new(1, -50, 1, 0),
-		Position = UDim2.fromOffset(7, 0),
+		Size = UDim2.new(1, -67, 1, 0),
+		Position = UDim2.fromOffset(24, 0),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = OFF_TEXT_COLOR,
@@ -962,6 +1316,8 @@ end
 local function beginGroup(parent, text, open)
 	local group = { cards = {}, collapsed = not open }
 	local holder = createCard("Frame", parent, text .. " Options", 24)
+
+	addIcon(holder, { shape = iconKindOf(nil, text, false), size = 11, x = 9, y = 12, color = ICON_COLOR })
 
 	local button = create("TextButton", {
 		Size = UDim2.new(1, -8, 1, -4),
@@ -1028,6 +1384,36 @@ end
 
 -- One horizontal row of equally sized columns; width is shared by scale so the
 -- grid follows the window when it is resized.
+-- A page can declare more columns than it fills. Empty columns are dropped and
+-- the occupied ones share the full width, so no page is half a strip of panels.
+local function fitColumns(columns)
+	local used = {}
+
+	for _, column in columns do
+		for _, child in column.frame:GetChildren() do
+			if child:IsA("GuiObject") and string.find(child.Name, " Box", 1, true) then
+				table.insert(used, column)
+				break
+			end
+		end
+	end
+
+	if #used == 0 or #used == #columns then
+		return
+	end
+
+	for _, column in columns do
+		column.frame.Visible = table.find(used, column) ~= nil
+	end
+
+	local width = 1 / #used
+	local shrink = math.floor(COLUMN_GAP * (#used - 1) / #used + 0.5)
+	for index, column in used do
+		column.frame.Size = UDim2.new(width, -shrink, 1, 0)
+		column.frame.LayoutOrder = index
+	end
+end
+
 local function createColumnRow(page, columnCount)
 	local count = math.clamp(columnCount or 3, 1, 3)
 	local row = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, page)
@@ -1130,6 +1516,15 @@ local function switchTab(name)
 				tween(label, FAST_TWEEN, { TextColor3 = selected and TEXT_COLOR or DIM_TEXT_COLOR })
 			end
 
+			local navIcon = button:FindFirstChild("NavIcon")
+			if navIcon then
+				for _, shape in navIcon:GetChildren() do
+					if shape.Name == "Fill" then
+						tween(shape, FAST_TWEEN, { BackgroundColor3 = selected and ACCENT_A or DIM_TEXT_COLOR })
+					end
+				end
+			end
+
 			if accent then
 				tween(accent, FAST_TWEEN, { BackgroundTransparency = selected and 0 or 1 })
 			end
@@ -1147,10 +1542,29 @@ local function switchTab(name)
 		AngelHub.headerLabel.Text = name
 	end
 
+	if AngelHub.headerGlyph then
+		setIcon(AngelHub.headerGlyph, iconKindOf(nil, name, true), 13, ACCENT_A)
+	end
+
 	local header = AngelHub.headerLabel and AngelHub.headerLabel.Parent
 	local groupLabel = header and header:FindFirstChild("HeaderGroup")
 	if groupLabel then
 		groupLabel.Text = string.upper(AngelHub.tabGroup[name] or "")
+	end
+
+	local countLabel = header and header:FindFirstChild("HeaderCount")
+	local columns = AngelHub.pageColumns[AngelHub.pages[name]]
+	local sectionCount = 0
+	for _, column in columns or {} do
+		for _, child in column.frame:GetChildren() do
+			if child:IsA("GuiObject") and string.find(child.Name, " Box", 1, true) then
+				sectionCount += 1
+			end
+		end
+	end
+
+	if countLabel then
+		countLabel.Text = sectionCount == 1 and "1 section" or (sectionCount > 0 and string.format("%d sections", sectionCount) or "")
 	end
 
 	-- Reveal the group that owns the sub-tab we just opened and fold the rest,
@@ -11932,20 +12346,29 @@ local function initializeScript()
 	end
 
 	-- Content pane: sub-tab header on top, paged grid underneath.
-	local content = create("Frame", {
+	local contentArea = create("Frame", {
+		Name = "ContentArea",
 		Size = UDim2.new(1, -RAIL_WIDTH, 1, -TITLE_HEIGHT),
 		Position = UDim2.fromOffset(RAIL_WIDTH, TITLE_HEIGHT),
 		BackgroundTransparency = 1,
 	}, window)
 
+	local content = create("Frame", {
+		Name = "Content",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.new(1, -CONTENT_INSET * 2, 1, -CONTENT_INSET),
+		Position = UDim2.fromScale(0.5, 0.5),
+		BackgroundTransparency = 1,
+	}, contentArea)
+
+	create("UISizeConstraint", { MaxSize = Vector2.new(CONTENT_MAX_WIDTH, math.huge) }, content)
+
 	create("UIPadding", {
-		PaddingTop = UDim.new(0, 6),
-		PaddingBottom = UDim.new(0, 8),
-		PaddingLeft = UDim.new(0, 10),
-		PaddingRight = UDim.new(0, 10),
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 10),
 	}, content)
 
-	local header = create("Frame", { Name = "ContentHeader", Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1 }, content)
+	local header = create("Frame", { Name = "ContentHeader", Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 }, content)
 
 	local headerIcon = create("Frame", {
 		Size = UDim2.fromOffset(22, 22),
@@ -11957,42 +12380,58 @@ local function initializeScript()
 	create("UICorner", { CornerRadius = UDim.new(0, 6) }, headerIcon)
 	addStroke(headerIcon, STROKE_COLOR, 0.4)
 
-	for _, sparkSize in { UDim2.fromOffset(2, 10), UDim2.fromOffset(10, 2) } do
-		create("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Size = sparkSize,
-			Position = UDim2.fromScale(0.5, 0.5),
-			BackgroundColor3 = ACCENT_A,
-			BorderSizePixel = 0,
-		}, headerIcon)
-	end
+	AngelHub.headerGlyph = addIcon(headerIcon, { shape = "spark", size = 13, x = 11, y = 11, color = ACCENT_A })
 
 	create("TextLabel", {
-		Size = UDim2.new(1, -34, 0, 9),
-		Position = UDim2.fromOffset(30, 3),
+		Name = "HeaderGroup",
+		Size = UDim2.new(1, -150, 0, 10),
+		Position = UDim2.fromOffset(30, 4),
 		BackgroundTransparency = 1,
 		Text = "",
 		TextColor3 = DIM_TEXT_COLOR,
 		TextSize = 8.5,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
-	}, header).Name = "HeaderGroup"
+	}, header)
 
 	AngelHub.headerLabel = create("TextLabel", {
-		Size = UDim2.new(1, -34, 0, 16),
-		Position = UDim2.fromOffset(30, 12),
+		Size = UDim2.new(1, -150, 0, 18),
+		Position = UDim2.fromOffset(30, 13),
 		BackgroundTransparency = 1,
 		Text = "",
 		TextColor3 = TEXT_COLOR,
-		TextSize = 13,
+		TextSize = 14.5,
 		Font = BOLD_FONT,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, header)
 
+	-- Right side of the header: how much is on this page.
+	create("TextLabel", {
+		Name = "HeaderCount",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.fromOffset(140, 12),
+		Position = UDim2.new(1, 0, 0.5, 3),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = DIM_TEXT_COLOR,
+		TextSize = 8.5,
+		Font = TEXT_FONT,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, header)
+
+	create("Frame", {
+		Name = "HeaderRule",
+		Size = UDim2.new(1, 0, 0, 1),
+		Position = UDim2.new(0, 0, 1, 0),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0.9,
+		BorderSizePixel = 0,
+	}, header)
+
 	local pager = create("Frame", {
 		Name = "Pages",
-		Size = UDim2.new(1, 0, 1, -34),
-		Position = UDim2.fromOffset(0, 34),
+		Size = UDim2.new(1, 0, 1, -44),
+		Position = UDim2.fromOffset(0, 44),
 		BackgroundTransparency = 1,
 	}, content)
 
@@ -12089,6 +12528,7 @@ local function initializeScript()
 
 		for _, tabName in group.tabs do
 			local button = create("TextButton", {
+				Name = tabName,
 				Size = UDim2.new(1, 0, 0, NAV_ROW_HEIGHT),
 				BackgroundColor3 = PANEL_SOFT,
 				BackgroundTransparency = 1,
@@ -12111,10 +12551,18 @@ local function initializeScript()
 			create("UICorner", { CornerRadius = UDim.new(1, 0) }, accent)
 			addGradient(accent, 90)
 
+			addIcon(button, {
+				shape = iconKindOf(nil, tabName, true),
+				size = 11,
+				x = 16,
+				y = NAV_ROW_HEIGHT / 2,
+				color = DIM_TEXT_COLOR,
+			}).Name = "NavIcon"
+
 			local label = create("TextLabel", {
 				Name = "Label",
-				Size = UDim2.new(1, -22, 1, 0),
-				Position = UDim2.fromOffset(13, 0),
+				Size = UDim2.new(1, -36, 1, 0),
+				Position = UDim2.fromOffset(33, 0),
 				BackgroundTransparency = 1,
 				Text = tabName,
 				TextColor3 = DIM_TEXT_COLOR,
@@ -12860,6 +13308,32 @@ local function initializeScript()
 		end)
 	end)
 
+	-- Apply the module priority order now that every section exists.
+	for _, box in AngelHub.boxes do
+		sortRowsByPriority(box)
+	end
+
+	-- Pages with fewer sections than columns would show a strip beside a hole;
+	-- empty columns step aside and the rest share the width evenly.
+	for _, columns in AngelHub.pageColumns do
+		fitColumns(columns)
+	end
+
+	-- Section subtitles count what each panel actually holds.
+	for _, box in AngelHub.boxes do
+		local subtitle = box:FindFirstChild("Subtitle", true)
+		if subtitle then
+			local total = 0
+			for _, child in box:GetChildren() do
+				if child:IsA("GuiObject") and child:GetAttribute("Prioritised") then
+					total += 1
+				end
+			end
+
+			subtitle.Text = total == 1 and "1 control" or (total > 0 and string.format("%d controls", total) or "")
+		end
+	end
+
 	-- Keep MM2 sections out of view in other experiences, including searches.
 	if game.PlaceId ~= 142823291 then
 		local mm2Boxes = {
@@ -12943,7 +13417,12 @@ local function initializeScript()
 		local query = string.lower(searchBox.Text)
 
 		for _, element in AngelHub.searchables do
-			element.Visible = (query == "" or string.find(string.lower(element.Name), query, 1, true) ~= nil) and not element:GetAttribute("GroupHidden")
+			local source = element:GetAttribute("IconName") or element.Name
+			local matched = query == ""
+				or string.find(string.lower(element.Name), query, 1, true) ~= nil
+				or string.find(string.lower(MODULE_ICONS[source] or ""), query, 1, true) ~= nil
+
+			element.Visible = matched and not element:GetAttribute("GroupHidden")
 		end
 
 		for _, section in AngelHub.sections do
